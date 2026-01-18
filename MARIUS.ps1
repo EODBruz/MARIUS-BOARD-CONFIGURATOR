@@ -19,6 +19,12 @@
 .INSTALLATION
     Quick Install (One-Liner):
     iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
+    
+.SECURITY WARNING
+    If you downloaded this script and get a security warning when running:
+    - Press "R" to Run once (safe - this is a trusted script)
+    - OR right-click file → Properties → Check "Unblock" → Apply
+    - OR use the one-liner above (no warning!)
 #>
 
 param()
