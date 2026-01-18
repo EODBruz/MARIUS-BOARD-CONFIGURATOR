@@ -20,7 +20,7 @@ Created by [@mariusheier](https://x.com/mariusheier) | Script by [@EODBruz](http
 Open PowerShell and run:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-Configurator/main/MARIUS.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
 That's it! The script will download and run automatically.
@@ -66,12 +66,12 @@ Supports all major Chromium-based browsers:
 ### One-Liner (Recommended)
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-Configurator/main/MARIUS.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
 ### Download and Run
 
-1. Download `MARIUS.ps1`
+1. Download `MARIUS.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
 2. Right-click → **Run with PowerShell**
 
 ---
