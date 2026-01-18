@@ -18,7 +18,7 @@
     
 .INSTALLATION
     Quick Install (One-Liner):
-    iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-Configurator/main/MARIUS.ps1 | iex
+    iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 #>
 
 param()
