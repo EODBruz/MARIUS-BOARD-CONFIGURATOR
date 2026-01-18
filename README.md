@@ -216,7 +216,7 @@ Each "chip" represents a hop in the USB chain:
 
 - **App Creator:** [@mariusheier](https://x.com/mariusheier)
 - **Script Developer:** [@EODBruz](https://github.com/EODBruz)
-- **Special Thanks:** FR33THY
+- **Special Thanks:** FR33THY Allow Scripts! Bat File
 
 ---
 
@@ -293,7 +293,7 @@ If none are found, it will use Windows default handler.
 
 - `MARIUS.ps1` - Main script (can run directly)
 - `Launch_MARIUS.bat` - Double-click launcher (easiest!)
-- `Create_Desktop_Shortcut.ps1` - Creates permanent desktop shortcut
+- `Create_Desktop_Shortcut.ps1` - Creates permanent desktop shortcut COMING SOON!!!!!
 - `README.md` - This documentation
 
 ---
