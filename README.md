@@ -101,7 +101,7 @@ iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/ma
 ### Method 3: Desktop Shortcut (Best for Repeat Use!)
 
 Create a permanent desktop shortcut:
-
+0. Coming Soon use Lanuch_MARIUS.bat
 1. Download `Create_Desktop_Shortcut.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
 2. Right-click → **Run with PowerShell**
 3. A shortcut appears on your desktop
