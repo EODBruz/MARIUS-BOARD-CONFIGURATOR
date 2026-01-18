@@ -15,7 +15,9 @@ Created by [@mariusheier](https://x.com/mariusheier) | Script by [@EODBruz](http
 
 ---
 
-## 🚀 Quick Install (Easiest!)
+## 🚀 Quick Install
+
+### Method 1: One-Liner (Recommended!)
 
 Open PowerShell and paste this:
 
@@ -23,7 +25,15 @@ Open PowerShell and paste this:
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-Done! No downloads, no security prompts, just runs.
+**Done!** No downloads, no security prompts, just runs instantly.
+
+### Method 2: Manual Download
+
+1. **Download:** [Launch_MARIUS.bat](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/raw/main/Launch_MARIUS.bat)
+2. **Double-click** the file
+3. **Done!** 
+
+The launcher downloads and runs the latest version automatically.
 
 ---
 
@@ -61,9 +71,9 @@ Supports all major Chromium-based browsers:
 
 ---
 
-## 📥 Installation
+## 📥 All Installation Methods
 
-### Method 1: One-Liner (Recommended)
+### Method 1: One-Liner (Fastest!)
 
 Paste this into PowerShell:
 
@@ -71,27 +81,51 @@ Paste this into PowerShell:
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-**Why this is best:**
+**Benefits:**
 - ✅ No files to download
 - ✅ No security warnings
 - ✅ Runs immediately
 - ✅ Always gets latest version
 
-### Method 2: Download and Run
+### Method 2: BAT Launcher (Double-Click!)
+
+1. Download `Launch_MARIUS.bat` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
+2. Double-click `Launch_MARIUS.bat`
+3. Done!
+
+**What it does:**
+- Downloads and runs the latest version automatically
+- Shows status in console window
+- No PowerShell commands needed
+
+### Method 3: Desktop Shortcut (Best for Repeat Use!)
+
+Create a permanent desktop shortcut:
+
+1. Download `Create_Desktop_Shortcut.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
+2. Right-click → **Run with PowerShell**
+3. A shortcut appears on your desktop
+4. Double-click "MARIUS Configurator" anytime!
+
+**Benefits:**
+- ✅ One-time setup
+- ✅ Always launches latest version
+- ✅ Clean desktop icon
+- ✅ No files to manage
+
+### Method 4: Direct Script Download
 
 1. Download `MARIUS.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
 2. Right-click → **Run with PowerShell**
 3. When you see: `[D] Do not run  [R] Run once...`
 4. Press **R** and Enter
 
-That's it!
-
 ---
 
 ## 🎯 Usage
 
 ### Main Menu
-1. Run the script (using either method above)
+1. Run the script (using any method above)
 2. Choose from the menu:
    - **Firmware Updater** - Opens in browser
    - **Setup Controller** - Opens in browser
@@ -125,6 +159,22 @@ Each "chip" represents a hop in the USB chain:
 
 2+ CHIPS: Device → [USB HUB] → [CHIPSET] → [CPU] ❌
           Highest latency - Avoid for gaming peripherals
+```
+
+### Example Results
+
+```
+● 0 CHIPS - DIRECT TO CPU (1 device)
+   └─ Wireless Controller
+      Raphael/Granite Ridge USB 3.1 | Ryzen 7000/9000 (AM5)
+
+● 1 CHIP - THROUGH CHIPSET (4 devices)
+   └─ G300s Optical Gaming Mouse
+      600 Series USB 3.2 | X670/B650 (AM5)
+
+● 2+ CHIPS - THROUGH HUB (1 device)
+   └─ SteelSeries Keyboard
+      2 chips | 1 hub(s)
 ```
 
 ### Optimization Tips
@@ -174,12 +224,9 @@ Each "chip" represents a hop in the USB chain:
 
 ### "Security warning - Do you want to run this script?"
 
-This is normal for downloaded PowerShell scripts. Just press **"R"** to run.
+This is normal for downloaded PowerShell scripts. Just press **"R"** to run once.
 
-**Want to avoid this?** Use the one-liner instead:
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
-```
+**Want to avoid this?** Use Method 1 (One-liner) or Method 2 (BAT launcher) instead - no warnings!
 
 ### "Is this script safe?"
 
@@ -191,7 +238,46 @@ Yes! The script is:
 
 ### "Which method should I use?"
 
-**Use the one-liner** (Method 1) - it's easier and has no prompts!
+**Most users:** Method 1 (One-liner) - easiest and fastest!
+**Want double-click:** Method 2 (BAT launcher)
+**Regular user:** Method 3 (Desktop shortcut) - set it and forget it!
+
+### "The BAT file won't run!"
+
+Make sure you downloaded `Launch_MARIUS.bat` (not `Launch_MARIUS_bat.bat` or similar). The file should be exactly 25 lines and start with `@echo off`.
+
+---
+
+## 🔧 Troubleshooting
+
+### Execution Policy Error
+
+If you get an execution policy error when running the .ps1 file directly:
+
+**Quick Fix:** Use Method 1 (one-liner) or Method 2 (BAT launcher) instead - they bypass this automatically!
+
+### Script Won't Run
+
+Check your PowerShell version:
+```powershell
+$PSVersionTable.PSVersion
+```
+
+Must be **5.1 or higher**. Windows 10/11 include this by default.
+
+### USB Analyzer Shows No Devices
+
+- Make sure devices are **plugged in and working**
+- Script only detects **input devices** (mouse, keyboard, controllers)
+- Try running as administrator if issues persist
+
+### Browser Doesn't Open
+
+The script will try browsers in this order:
+1. Your default browser
+2. Chrome → Edge → Brave → Opera → Vivaldi → Arc
+
+If none are found, it will use Windows default handler.
 
 ---
 
@@ -203,4 +289,27 @@ Yes! The script is:
 
 ---
 
+## 📝 Files in This Repo
+
+- `MARIUS.ps1` - Main script (can run directly)
+- `Launch_MARIUS.bat` - Double-click launcher (easiest!)
+- `Create_Desktop_Shortcut.ps1` - Creates permanent desktop shortcut
+- `README.md` - This documentation
+
+---
+
+## 🎮 Made for Gamers
+
+**Optimize your USB ports. Minimize your latency. Maximize your performance.**
+
+Built with ❤️ for the competitive gaming community.
+
+---
+
+<div align="center">
+
 **Made for gamers who care about latency.** 🎮⚡
+
+[⭐ Star this repo](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) | [🐛 Report Bug](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [✨ Request Feature](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
+
+</div>
