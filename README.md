@@ -15,15 +15,15 @@ Created by [@mariusheier](https://x.com/mariusheier) | Script by [@EODBruz](http
 
 ---
 
-## 🚀 Quick Install (One-Liner)
+## 🚀 Quick Install (Easiest!)
 
-Open PowerShell and run:
+Open PowerShell and paste this:
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-That's it! The script will download and run automatically.
+Done! No downloads, no security prompts, just runs.
 
 ---
 
@@ -63,56 +63,102 @@ Supports all major Chromium-based browsers:
 
 ## 📥 Installation
 
-### One-Liner (Recommended - No Security Warning!)
+### Method 1: One-Liner (Recommended)
 
-The easiest way to run the script **without security warnings**:
+Paste this into PowerShell:
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-This downloads and runs directly without saving to disk, so Windows doesn't flag it.
+**Why this is best:**
+- ✅ No files to download
+- ✅ No security warnings
+- ✅ Runs immediately
+- ✅ Always gets latest version
 
-### Download and Run
+### Method 2: Download and Run
 
-If you download the file manually, you'll see a security warning. Here's how to handle it:
-
-#### Quick Fix: Use Allow_Scripts.cmd ⭐ NEW!
-
-1. Download both `MARIUS.ps1` AND `Allow_Scripts.cmd` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
-2. Right-click **Allow_Scripts.cmd** → **Run as Administrator**
-3. Choose option **1** (Scripts: On)
-4. Now **MARIUS.ps1** runs with no warnings!
-
-**What it does:**
-- ✅ Enables PowerShell scripts permanently
-- ✅ Unblocks all files in the folder
-- ✅ Allows double-click to run .ps1 files
-- ✅ One-time setup, works for all future scripts
-
-#### Option 1: Right-click → "Run with PowerShell" → Press "R"
 1. Download `MARIUS.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
 2. Right-click → **Run with PowerShell**
-3. When prompted: `[D] Do not run  [R] Run once  [S] Suspend`
-4. **Press "R"** (Run once)
+3. When you see: `[D] Do not run  [R] Run once...`
+4. Press **R** and Enter
 
-#### Option 2: Unblock the File (No warning next time)
-1. Download `MARIUS.ps1`
-2. Right-click → **Properties**
-3. Check **"Unblock"** at the bottom
-4. Click **Apply** → **OK**
-5. Now run normally
+That's it!
 
-#### Option 3: Unblock via PowerShell
-```powershell
-Unblock-File -Path ".\MARIUS.ps1"
-.\MARIUS.ps1
+---
+
+## 🎯 Usage
+
+### Main Menu
+1. Run the script (using either method above)
+2. Choose from the menu:
+   - **Firmware Updater** - Opens in browser
+   - **Setup Controller** - Opens in browser
+   - **Polling Rate Checker** - Opens in browser
+   - **USB Latency Analyzer** - Opens built-in analyzer
+   - **Creator Twitter** - Opens [@mariusheier](https://x.com/mariusheier)
+   - **Exit** - Close application
+
+### USB Latency Analyzer
+1. Click **"USB Latency Analyzer"** from main menu
+2. Click **"SCAN USB DEVICES"**
+3. View results color-coded by latency:
+   - 🟢 Green = 0 chips (Direct to CPU - Best!)
+   - 🟠 Orange = 1 chip (Through chipset - Good)
+   - 🔴 Red = 2+ chips (Through hub - Avoid for gaming)
+
+---
+
+## 📊 Understanding USB Latency
+
+### What Does "Chip Count" Mean?
+
+Each "chip" represents a hop in the USB chain:
+
+```
+0 CHIPS: Device → [CPU] ✅
+         Lowest latency - Perfect for competitive gaming
+
+1 CHIP:  Device → [CHIPSET] → [CPU] ⚠️
+         Normal latency - Fine for most uses
+
+2+ CHIPS: Device → [USB HUB] → [CHIPSET] → [CPU] ❌
+          Highest latency - Avoid for gaming peripherals
 ```
 
-#### Option 4: Bypass Execution Policy (One-time)
-```powershell
-powershell -ExecutionPolicy Bypass -File ".\MARIUS.ps1"
-```
+### Optimization Tips
+
+🎯 **For competitive gaming:**
+- Move mouse/keyboard to **0 CHIP ports** (if available)
+- Avoid USB hubs for gaming peripherals
+- Use rear I/O ports (usually better than front panel)
+
+📍 **Finding the best ports:**
+- Check your motherboard manual for "CPU-connected" USB ports
+- Try different rear panel USB ports and rescan
+- USB 3.0/3.1/3.2 ports often have better paths
+
+---
+
+## 🖥️ Supported Hardware
+
+### Intel Platforms
+- 14th Gen (Meteor Lake, Lunar Lake)
+- 13th Gen (Raptor Lake)
+- 12th Gen (Alder Lake)
+- 11th Gen (Tiger Lake)
+- 10th Gen and older
+
+### AMD Platforms
+- Ryzen 9000 Series (Zen 5)
+- Ryzen 7000 Series (Zen 4)
+- Ryzen 5000/4000/3000 Series
+- Ryzen 2000/1000 Series
+
+### Third-Party Controllers
+- ASMedia, VIA, Renesas
+- Intel Thunderbolt 3/4/5
 
 ---
 
@@ -124,18 +170,13 @@ powershell -ExecutionPolicy Bypass -File ".\MARIUS.ps1"
 
 ---
 
-## ❓ Common Questions
+## ❓ FAQ
 
 ### "Security warning - Do you want to run this script?"
 
-This is normal for downloaded PowerShell scripts. You have 3 options:
+This is normal for downloaded PowerShell scripts. Just press **"R"** to run.
 
-**Option 1:** Press **"R"** to run once (safest for first time)
-
-**Option 2:** Unblock the file before running:
-- Right-click MARIUS.ps1 → Properties → Check "Unblock" → Apply
-
-**Option 3:** Use the one-liner instead (no warning):
+**Want to avoid this?** Use the one-liner instead:
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
@@ -145,10 +186,21 @@ iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/ma
 Yes! The script is:
 - ✅ **Open source** - You can read all the code on GitHub
 - ✅ **No admin required** - Only reads USB info
-- ✅ **No malware** - Just PowerShell and Windows Forms
-- ✅ **Trusted creator** - Made for [@mariusheier](https://x.com/mariusheier)'s MARIUS community
+- ✅ **No system changes** - Doesn't modify anything
+- ✅ **Community trusted** - Made for [@mariusheier](https://x.com/mariusheier)'s MARIUS community
+
+### "Which method should I use?"
+
+**Use the one-liner** (Method 1) - it's easier and has no prompts!
+
+---
+
+## 📞 Support
+
+- **Issues:** [GitHub Issues](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
+- **Creator:** [@mariusheier on Twitter/X](https://x.com/mariusheier)
+- **Developer:** [@EODBruz on GitHub](https://github.com/EODBruz)
 
 ---
 
 **Made for gamers who care about latency.** 🎮⚡
-
