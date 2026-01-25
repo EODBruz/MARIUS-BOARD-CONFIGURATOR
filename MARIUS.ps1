@@ -304,7 +304,7 @@ function Show-UsbAnalyzer {
     $analyzerForm.Height = 654
     $analyzerForm.StartPosition = "CenterScreen"
     $analyzerForm.FormBorderStyle = "None"
-    $analyzerForm.BackColor = [System.Drawing.Color]::White
+    $analyzerForm.BackColor = [System.Drawing.Color]::Yellow
     $analyzerForm.Padding = New-Object System.Windows.Forms.Padding(2)
 
     $mainPanel = New-Object System.Windows.Forms.Panel
@@ -419,9 +419,22 @@ function Show-UsbAnalyzer {
     $scanBtn.Text = ""
     $scanBtn.Cursor = [System.Windows.Forms.Cursors]::Hand
     $scanBtn.FlatAppearance.BorderSize = 1
-    $scanBtn.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
+    $scanBtn.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
     $scanBtn.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $scanBtn.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+
+    # Add hover glow effect
+    $scanBtn.Add_MouseEnter({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 255, 0)
+        $this.FlatAppearance.BorderSize = 2
+    })
+    
+    $scanBtn.Add_MouseLeave({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(15, 15, 15)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+        $this.FlatAppearance.BorderSize = 1
+    })
 
     $scanBtn.Add_Paint({
         param($sender, $e)
@@ -452,9 +465,22 @@ function Show-UsbAnalyzer {
     $exitBtn.Text = ""
     $exitBtn.Cursor = [System.Windows.Forms.Cursors]::Hand
     $exitBtn.FlatAppearance.BorderSize = 1
-    $exitBtn.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
+    $exitBtn.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
     $exitBtn.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $exitBtn.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+
+    # Add hover glow effect
+    $exitBtn.Add_MouseEnter({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 255, 0)
+        $this.FlatAppearance.BorderSize = 2
+    })
+    
+    $exitBtn.Add_MouseLeave({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(15, 15, 15)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+        $this.FlatAppearance.BorderSize = 1
+    })
 
     $exitBtn.Add_Paint({
         param($sender, $e)
@@ -648,7 +674,7 @@ $form.Width = 854
 $form.Height = 654
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
-$form.BackColor = [System.Drawing.Color]::White
+$form.BackColor = [System.Drawing.Color]::Yellow
 $form.Padding = New-Object System.Windows.Forms.Padding(2)
 
 $form.Add_Shown({
@@ -664,7 +690,7 @@ $form.Add_Shown({
 
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 650)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 646)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -690,13 +716,22 @@ $headerPanel.Add_MouseUp({
 })
 
 $titleLabel = New-Object System.Windows.Forms.Label
-$titleLabel.Location = New-Object System.Drawing.Point(0, 35)
-$titleLabel.Size = New-Object System.Drawing.Size(854, 40)
+$titleLabel.Location = New-Object System.Drawing.Point(150, 30)
+$titleLabel.Size = New-Object System.Drawing.Size(550, 50)
 $titleLabel.Text = "MARIUS BOARD CONFIGURATOR"
 $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
 $titleLabel.ForeColor = [System.Drawing.Color]::Yellow
 $titleLabel.TextAlign = "MiddleCenter"
-$titleLabel.BackColor = [System.Drawing.Color]::Transparent
+$titleLabel.BackColor = [System.Drawing.Color]::Black
+
+# Add Paint event for custom yellow border
+$titleLabel.Add_Paint({
+    param($sender, $e)
+    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::Yellow, 3)
+    $rect = New-Object System.Drawing.Rectangle(1, 1, $sender.Width - 3, $sender.Height - 3)
+    $e.Graphics.DrawRectangle($pen, $rect)
+    $pen.Dispose()
+})
 
 $titleLabel.Add_MouseDown({
     $script:dragging = $true
@@ -723,6 +758,7 @@ $websites = @(
     @{Name="Setup Controller"; URL="https://devsetup.mariusheier.com/"; Desc="Calibrate and configure your controller settings and polling rate settings"},
     @{Name="Polling Rate Checker"; URL="https://tools.mariusheier.com/poll_checker.html"; Desc="Test and verify your controller's polling rate"},
     @{Name="USB Latency Analyzer"; URL="USB_ANALYZER"; Desc="Count chips between your device and CPU. More chips = more latency"},
+    @{Name="Joystick Tester"; URL="https://gamepad-tester.net/joystick-test"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
 )
@@ -731,7 +767,7 @@ $tileWidth = 790
 $tileHeight = 65
 $spacing = 10
 $startX = 30
-$startY = 115
+$startY = 105
 
 $index = 0
 foreach ($site in $websites) {
@@ -749,10 +785,23 @@ foreach ($site in $websites) {
     $tile.TextAlign = "MiddleCenter"
     $tile.Cursor = [System.Windows.Forms.Cursors]::Hand
     $tile.FlatAppearance.BorderSize = 1
-    $tile.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
+    $tile.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
     $tile.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $tile.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
     $tile.Tag = $site.URL
+    
+    # Add hover glow effect
+    $tile.Add_MouseEnter({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 255, 0)
+        $this.FlatAppearance.BorderSize = 2
+    })
+    
+    $tile.Add_MouseLeave({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(15, 15, 15)
+        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+        $this.FlatAppearance.BorderSize = 1
+    })
     
     $siteName = $site.Name
     $siteDesc = $site.Desc
@@ -765,13 +814,13 @@ foreach ($site in $websites) {
         $titleFont = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
         $descFont = New-Object System.Drawing.Font("Segoe UI", 8)
         $whiteBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
-        $grayBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(160, 160, 160))
+        $redBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Red)
         
         $g.DrawString($siteName, $titleFont, $whiteBrush, 20, 12)
-        $g.DrawString($siteDesc, $descFont, $grayBrush, 20, 35)
+        $g.DrawString($siteDesc, $descFont, $redBrush, 20, 35)
         
         $whiteBrush.Dispose()
-        $grayBrush.Dispose()
+        $redBrush.Dispose()
         $titleFont.Dispose()
         $descFont.Dispose()
     }.GetNewClosure())
@@ -824,7 +873,7 @@ foreach ($site in $websites) {
 
 # Add Credits Label (Red text at bottom)
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(0, 625)
+$creditsLabel.Location = New-Object System.Drawing.Point(0, 623)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
