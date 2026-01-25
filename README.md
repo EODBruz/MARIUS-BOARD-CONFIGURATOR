@@ -1,3 +1,11 @@
+<div align="center">
+
+![MARIUS Logo](logo.png)
+
+</div>
+
+---
+
 # MARIUS Board Configurator
 
 <div align="center">
@@ -44,6 +52,7 @@ The launcher downloads and runs the latest version automatically.
 - **Setup Controller** - Calibrate and configure controller settings
 - **Polling Rate Checker** - Test and verify your controller's polling rate
 - **USB Latency Analyzer** - Analyze USB chip latency (Built-in!)
+- **Joystick Tester** - Test your joystick inputs, buttons, and analog stick precision
 - **Creator Twitter** - Follow [@mariusheier](https://x.com/mariusheier) for updates
 
 ### 📊 **USB Latency Analyzer V3**
@@ -130,6 +139,7 @@ Create a permanent desktop shortcut: COMING SOON!!!!
    - **Setup Controller** - Opens in browser
    - **Polling Rate Checker** - Opens in browser
    - **USB Latency Analyzer** - Opens built-in analyzer
+   - **Joystick Tester** - Opens joystick testing tool
    - **Creator Twitter** - Opens [@mariusheier](https://x.com/mariusheier)
    - **Exit** - Close application
 
@@ -294,6 +304,7 @@ If none are found, it will use Windows default handler.
 - `Launch_MARIUS.bat` - Double-click launcher (easiest!)
 - `Create_Desktop_Shortcut.ps1` - Creates permanent desktop shortcut COMING SOON!!!!!
 - `README.md` - This documentation
+- `logo.png` - MARIUS logo
 
 ---
 
