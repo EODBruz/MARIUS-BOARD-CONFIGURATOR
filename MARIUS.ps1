@@ -831,7 +831,7 @@ $websites = @(
     @{Name="Setup Controller"; URL="https://devsetup.mariusheier.com/"; Desc="Calibrate and configure your controller settings and polling rate settings"},
     @{Name="Polling Rate Checker"; URL="https://tools.mariusheier.com/poll_checker.html"; Desc="Test and verify your controller's polling rate"},
     @{Name="USB Latency Analyzer"; URL="USB_ANALYZER"; Desc="Count chips between your device and CPU. More chips = more latency"},
-    @{Name="Joystick Tester"; URL="https://gamepad-tester.net/joystick-test"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
+    @{Name="Joystick Tester"; URL="https://hardwaretester.com/gamepad"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
     @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
