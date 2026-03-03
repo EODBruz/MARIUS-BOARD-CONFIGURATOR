@@ -314,7 +314,7 @@ function Show-UsbAnalyzer {
 
     $headerPanel = New-Object System.Windows.Forms.Panel
     $headerPanel.Location = New-Object System.Drawing.Point(0, 0)
-    $headerPanel.Size = New-Object System.Drawing.Size(850, 100)
+    $headerPanel.Size = New-Object System.Drawing.Size(850, 85)
     $headerPanel.BackColor = [System.Drawing.Color]::Black
 
     $headerPanel.Add_MouseDown({
@@ -665,13 +665,76 @@ function Show-UsbAnalyzer {
 }
 
 # ============================================================================
+# GAMEBAR NOTIFICATION FIX FUNCTION
+# ============================================================================
+
+function Invoke-GameBarNotificationFix {
+    # Check current state to show accurate status in dialog
+    $isApplied = (Get-ItemProperty "Registry::HKCR\ms-gamebar" -Name "NoOpenWith" -ErrorAction SilentlyContinue) -ne $null
+    $s6 = if ($isApplied) { "" } else { [char]0x2713 }
+    $s7 = if ($isApplied) { [char]0x2713 } else { "" }
+
+    $choice = (New-Object -ComObject Wscript.Shell).Popup(
+        "Yes to apply $s6  -  No to restore $s7",
+        0,
+        "GameBar Notification Removed",
+        0x1043
+    )
+
+    # 6 = Yes (apply), 7 = No (restore), 2 = Cancel
+    if ($choice -eq 2 -or $choice -eq $null) { return }
+    $cl = if ($choice -eq 6) { 'apply' } else { 'restore' }
+    $toggle = if ($cl -eq 'apply') { 0 } else { 1 }
+
+    # Under current user
+    sp "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" "AppCaptureEnabled" $toggle -type dword -force -ea 0
+    sp "HKCU:\System\GameConfigStore" "GameDVR_Enabled" $toggle -type dword -force -ea 0
+
+    # Admin block for HKCR registry changes
+    $psBlock = [scriptblock]::Create(@"
+        `$toggle = $toggle
+        `$cl = '$cl'
+        "ms-gamebar","ms-gamebarservices","ms-gamingoverlay" | ForEach-Object {
+            if (!(Test-Path "Registry::HKCR\`$_\shell")) { New-Item "Registry::HKCR\`$_\shell" -Force | Out-Null }
+            if (!(Test-Path "Registry::HKCR\`$_\shell\open")) { New-Item "Registry::HKCR\`$_\shell\open" -Force | Out-Null }
+            if (!(Test-Path "Registry::HKCR\`$_\shell\open\command")) { New-Item "Registry::HKCR\`$_\shell\open\command" -Force | Out-Null }
+            Set-ItemProperty "Registry::HKCR\`$_" "(Default)" "URL:`$_" -Force
+            Set-ItemProperty "Registry::HKCR\`$_" "URL Protocol" "" -Force
+            if (`$toggle -eq 0) {
+                Set-ItemProperty "Registry::HKCR\`$_" "NoOpenWith" "" -Force
+                Set-ItemProperty "Registry::HKCR\`$_\shell\open\command" "(Default)" "`"`$env:SystemRoot\System32\systray.exe`"" -Force
+            } else {
+                Remove-ItemProperty "Registry::HKCR\`$_" "NoOpenWith" -Force -ErrorAction SilentlyContinue
+                Remove-Item "Registry::HKCR\`$_\shell" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+"@)
+
+    $isAdmin = [Security.Principal.WindowsIdentity]::GetCurrent().Groups.Value -contains 'S-1-5-32-544'
+    if ($isAdmin) {
+        . $psBlock
+    } else {
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($psBlock.ToString()))
+        Start-Process powershell -ArgumentList "-nop -enc $encoded" -Verb RunAs -Wait -ErrorAction SilentlyContinue
+    }
+
+    $msg = if ($cl -eq 'apply') {
+        "GameBar Notification fix applied!`n`nGameBar popups and ms-gamebar URI handlers have been disabled.`nThis helps prevent interference with 8K polling rate controllers."
+    } else {
+        "GameBar Notification restored.`n`nms-gamebar URI handlers have been re-enabled to their default state."
+    }
+    $title = if ($cl -eq 'apply') { "GameBar Notification Removed" } else { "GameBar Notification Restored" }
+    [System.Windows.Forms.MessageBox]::Show($msg, $title, [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+}
+
+# ============================================================================
 # MAIN BROWSER WINDOW
 # ============================================================================
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 654
+$form.Height = 718
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -690,12 +753,12 @@ $form.Add_Shown({
 
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 646)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 710)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
 $headerPanel.Location = New-Object System.Drawing.Point(0, 0)
-$headerPanel.Size = New-Object System.Drawing.Size(850, 100)
+$headerPanel.Size = New-Object System.Drawing.Size(850, 85)
 $headerPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel.Add_MouseDown({
@@ -715,42 +778,52 @@ $headerPanel.Add_MouseUp({
     $script:dragging = $false
 })
 
-$titleLabel = New-Object System.Windows.Forms.Label
-$titleLabel.Location = New-Object System.Drawing.Point(150, 30)
-$titleLabel.Size = New-Object System.Drawing.Size(550, 50)
-$titleLabel.Text = "MARIUS BOARD CONFIGURATOR"
-$titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
-$titleLabel.ForeColor = [System.Drawing.Color]::Yellow
-$titleLabel.TextAlign = "MiddleCenter"
-$titleLabel.BackColor = [System.Drawing.Color]::Black
+# --- TITLE IMAGE (replaces text label) ---
+$titlePicBox = New-Object System.Windows.Forms.PictureBox
+$titlePicBox.Location = New-Object System.Drawing.Point(0, 0)
+$titlePicBox.Size = New-Object System.Drawing.Size(850, 85)
+$titlePicBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
+$titlePicBox.BackColor = [System.Drawing.Color]::Black
 
-# Add Paint event for custom yellow border
-$titleLabel.Add_Paint({
-    param($sender, $e)
-    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::Yellow, 3)
-    $rect = New-Object System.Drawing.Rectangle(1, 1, $sender.Width - 3, $sender.Height - 3)
-    $e.Graphics.DrawRectangle($pen, $rect)
-    $pen.Dispose()
-})
+try {
+    $wc = New-Object System.Net.WebClient
+    $imgBytes = $wc.DownloadData("https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/Title.png")
+    $ms = New-Object System.IO.MemoryStream($imgBytes, 0, $imgBytes.Length)
+    $titlePicBox.Image = [System.Drawing.Image]::FromStream($ms)
+} catch {
+    # Fallback: draw text if image fails to load
+    $titlePicBox.Add_Paint({
+        param($sender, $e)
+        $font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
+        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $sf = New-Object System.Drawing.StringFormat
+        $sf.Alignment = [System.Drawing.StringAlignment]::Center
+        $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
+        $rect = New-Object System.Drawing.RectangleF(0, 0, $sender.Width, $sender.Height)
+        $e.Graphics.DrawString("MARIUS BOARD CONFIGURATOR", $font, $brush, $rect, $sf)
+        $font.Dispose()
+        $brush.Dispose()
+    })
+}
 
-$titleLabel.Add_MouseDown({
+$titlePicBox.Add_MouseDown({
     $script:dragging = $true
     $script:dragCursorX = [System.Windows.Forms.Cursor]::Position.X - $form.Left
     $script:dragCursorY = [System.Windows.Forms.Cursor]::Position.Y - $form.Top
 })
 
-$titleLabel.Add_MouseMove({
+$titlePicBox.Add_MouseMove({
     if ($script:dragging) {
         $form.Left = [System.Windows.Forms.Cursor]::Position.X - $script:dragCursorX
         $form.Top = [System.Windows.Forms.Cursor]::Position.Y - $script:dragCursorY
     }
 })
 
-$titleLabel.Add_MouseUp({
+$titlePicBox.Add_MouseUp({
     $script:dragging = $false
 })
 
-$headerPanel.Controls.Add($titleLabel)
+$headerPanel.Controls.Add($titlePicBox)
 $mainPanel.Controls.Add($headerPanel)
 
 $websites = @(
@@ -759,6 +832,7 @@ $websites = @(
     @{Name="Polling Rate Checker"; URL="https://tools.mariusheier.com/poll_checker.html"; Desc="Test and verify your controller's polling rate"},
     @{Name="USB Latency Analyzer"; URL="USB_ANALYZER"; Desc="Count chips between your device and CPU. More chips = more latency"},
     @{Name="Joystick Tester"; URL="https://gamepad-tester.net/joystick-test"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
+    @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
 )
@@ -767,12 +841,13 @@ $tileWidth = 790
 $tileHeight = 65
 $spacing = 10
 $startX = 30
-$startY = 105
+$startY = 90
 
 $index = 0
 foreach ($site in $websites) {
     $xPos = $startX
-    $yPos = $startY + ($index * ($tileHeight + $spacing))
+    $effectiveStartY = if ($script:dynamicStartY) { $script:dynamicStartY } else { $startY }
+    $yPos = $effectiveStartY + ($index * ($tileHeight + $spacing))
     
     $tile = New-Object System.Windows.Forms.Button
     $tile.Location = New-Object System.Drawing.Point($xPos, $yPos)
@@ -838,6 +913,11 @@ foreach ($site in $websites) {
             return
         }
         
+        if ($targetUrl -eq "GAMEBAR_FIX") {
+            Invoke-GameBarNotificationFix
+            return
+        }
+        
         $defaultBrowser = Get-DefaultBrowser
         $browserPath = Get-BrowserPath $defaultBrowser
         
@@ -873,7 +953,7 @@ foreach ($site in $websites) {
 
 # Add Credits Label (Red text at bottom)
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(0, 623)
+$creditsLabel.Location = New-Object System.Drawing.Point(0, 685)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
