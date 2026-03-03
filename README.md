@@ -53,6 +53,7 @@ The launcher downloads and runs the latest version automatically.
 - **Polling Rate Checker** - Test and verify your controller's polling rate
 - **USB Latency Analyzer** - Analyze USB chip latency (Built-in!)
 - **Joystick Tester** - Test your joystick inputs, buttons, and analog stick precision
+- **GameBar Noti Removed** - Removes Gamebar Annoying message with 8K Polling Rates Affected Controllers
 - **Creator Twitter** - Follow [@mariusheier](https://x.com/mariusheier) for updates
 
 ### 📊 **USB Latency Analyzer V3**
