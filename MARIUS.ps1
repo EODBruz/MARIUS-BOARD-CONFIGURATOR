@@ -731,7 +731,8 @@ function Invoke-GameBarNotificationFix {
 # MAIN BROWSER WINDOW
 # ============================================================================
 
-$form = New-Object System.Windows.Forms.Form
+$script:form = New-Object System.Windows.Forms.Form
+$form = $script:form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
 $form.Height = 793
@@ -752,6 +753,7 @@ $form.Add_Shown({
 })
 
 $mainPanel = New-Object System.Windows.Forms.Panel
+$script:mainPanel = $mainPanel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
 $mainPanel.Size = New-Object System.Drawing.Size(850, 789)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
@@ -951,6 +953,40 @@ foreach ($site in $websites) {
     $mainPanel.Controls.Add($tile)
     $index++
 }
+
+# ============================================================================
+# RGB BORDER ANIMATION TIMER
+# ============================================================================
+
+$script:rgbHue = 0
+$script:rgbTimer = New-Object System.Windows.Forms.Timer
+$script:rgbTimer.Interval = 20
+
+$script:rgbTimer.Add_Tick({
+    $script:rgbHue = ($script:rgbHue + 2) % 360
+    $h = $script:rgbHue / 360.0
+    $i = [Math]::Floor($h * 6)
+    $f = $h * 6 - $i
+    $q = 1 - $f
+    $t = $f
+    switch ($i % 6) {
+        0 { $r = 255; $g = [int]($t * 255); $b = 0 }
+        1 { $r = [int]($q * 255); $g = 255; $b = 0 }
+        2 { $r = 0; $g = 255; $b = [int]($t * 255) }
+        3 { $r = 0; $g = [int]($q * 255); $b = 255 }
+        4 { $r = [int]($t * 255); $g = 0; $b = 255 }
+        5 { $r = 255; $g = 0; $b = [int]($q * 255) }
+    }
+    $rgbColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+    $script:form.BackColor = $rgbColor
+    foreach ($ctrl in $script:mainPanel.Controls) {
+        if ($ctrl -is [System.Windows.Forms.Button]) {
+            $ctrl.FlatAppearance.BorderColor = $rgbColor
+        }
+    }
+})
+
+$script:rgbTimer.Start()
 
 # Add Credits Label (Red text at bottom)
 $creditsLabel = New-Object System.Windows.Forms.Label
