@@ -734,7 +734,7 @@ function Invoke-GameBarNotificationFix {
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 718
+$form.Height = 793
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -753,7 +753,7 @@ $form.Add_Shown({
 
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 710)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 789)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -833,6 +833,7 @@ $websites = @(
     @{Name="USB Latency Analyzer"; URL="USB_ANALYZER"; Desc="Count chips between your device and CPU. More chips = more latency"},
     @{Name="Joystick Tester"; URL="https://hardwaretester.com/gamepad"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
     @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+    @{Name="Setup Guide By Parasite"; URL="https://x.com/Parasite/status/2033329474922549297"; Desc="Explains How to setup sticks/controller"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
 )
@@ -953,7 +954,7 @@ foreach ($site in $websites) {
 
 # Add Credits Label (Red text at bottom)
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(0, 685)
+$creditsLabel.Location = New-Object System.Drawing.Point(0, 760)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
