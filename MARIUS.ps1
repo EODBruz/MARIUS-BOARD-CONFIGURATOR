@@ -1,16 +1,17 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator with Built-in USB Latency Analyzer V3
+    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.1
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including the built-in USB Latency Analyzer.
     No additional files needed - everything is contained in this single script.
+    Features auto-updater, desktop shortcut installer, and embedded MBC icon.
 
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.0
+    Version: 3.1
     
 .CREDITS
     App Creator: @mariusheier
@@ -23,11 +24,180 @@
 .SECURITY WARNING
     If you downloaded this script and get a security warning when running:
     - Press "R" to Run once (safe - this is a trusted script)
-    - OR right-click file → Properties → Check "Unblock" → Apply
+    - OR right-click file -> Properties -> Check "Unblock" -> Apply
     - OR use the one-liner above (no warning!)
 #>
 
 param()
+
+# ============================================================================
+# VERSION & AUTO-UPDATE SYSTEM
+# ============================================================================
+
+$script:CurrentVersion = "3.1"
+$script:InstallDir     = "$env:APPDATA\MARIUS"
+$script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
+$script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
+$script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
+
+# ============================================================================
+# EMBEDDED MBC ICON (Yellow + Black, Base64 encoded ICO)
+# ============================================================================
+
+$script:MbcIconBase64 = "AAABAAMAEBAAAAAAIAAHAgAANgAAACAgAAAAACAAEAQAAD0CAAAwMAAAAAAgAMUFAABNBgAAiVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABzklEQVR4nKXTv0uVURgH8M9573tveg25oTdykX5omjgUtEXQkEstkdAiDUGLNAa1tNd/EBE0RUU0NDcEBZG1hIMYYgkmFCn5oyS86nsa3tcrtJh04MBznsPzfb7P+X5PCEGstZMEu1pZZGmFtNbOm6d01onrhB2AYiSUWZjn1CXSJNBVp3YADezEJKJCWc46hcY6sZHvf2JQ1EBCXhRjnmjGYbtgK6+4i7YbpVvISWtOL26SVItxUkKax7FBSCi1o5SDNBkkgZlplpYIFaY+srrK3Czvx/ixQKjmRa9eMjFOmuTnNIu0tHBmhIEebt+g7yyvH3PnHp37+DTLs/uM3mRvld5DXBkmSUgD1tY40s3cN67dYvAoaw1KJSpl2lp5N8bUDBMT+ajfx4lZ8QYh8HOVC0MsN2ibZGGRpWVODvL2A5uBcsqju9Q76D9YMBDyWS4Pc+40+4/x5AEnBhgd4fMXrl/l4nm6u3j4nN7DHO8jywgdNXHyBfUeLJJtkLQXKlQKnSKWUcWeXIWFafqHihFiZGORsJHT2ljJlcl+b8uVlsh+sblCUsm7N31QKZO2alp5yxzJXy4soVRYuVIuALLI13nW7f4zZZHwv9/5D99UofBpTIewAAAAAElFTkSuQmCCiVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAD10lEQVR4nO2XTWhcVRTHf/e9N5NOMvmYTBtbP6g0StOiEKgiXepC3EQskVCr1hRjWz9QN7px4cqF4MpFd0WKICI0FisaFS0qaS1tVRRCA20N1rZMwkxmTOcjM/PecXHua14maXQziYseeLx7zzn3nv89H/fDAMIakgdgDHS26381SAQKc/r3QI3/ehw6UyC15gERARODwiz0D0D+74gH0ilIdgM1oFmeECCmRsNFeqGsVtPVN90D1lZINwAYYw2b5uaCaZjfaZ6p/0a3ANwC4DUygsA2DLgReH4ACBgHHKN6EtnEjQGnYTkiVk+n0wpYEYCAmwDiQABSXCgZN4n6qwpUwEkAscjYOkjZGrAAHQ/cdmvFB4oreEDsLjU5AVcy0N4GD/bbgQ78dBJKZdh8O/RuhfMTcDVjPWbgztugr0+BB1VwklDOw6lxmPoLNvXAzh3Q1b3YcwCS6kRmziCSR0aGEEAcB5kYQ/wscvaY8gB57TlE6sjwoPY9FzFW9uwTyPxFRK4gJ0eRe+5WvnH0379dZblzSKrD2mkMQTyusQwCOPQROJ3w/hEVO47KEWhNaP+Lw+BPQ18vfHgMMpehUoLBA3BhCj54F7K/w/lv4MBuCCqLc2VJEvq+Gh94BD4+Di99B6Nfwa5H4dOvbTKiOkEAX/4AFzKQnYUH7odN98K3Y3BtBgYfg+GDQBZS22DrfcC8DYHNrSVlGKJ78WloicOug7AhDSNDyg8rI6yWI0fhrXdgJgcb14OJw3Re9XrvgloFyiWozkEt32htGQCuo5nftwX2DMDkJXj+Sdh8x+JS8zztHz0EuQK8uR8+PwFjo7Bjm3rq9G8QcyCxAeLrIZZcmoBLQlD3ValYhpf3wXQORp6BqSnl+766r17X/o9noJyAU7/o+OsV2P4Q7OyH70/D8H54aggu/wHjZ+Hwe7a0I0AWqiCHvPGC9n/+DJEMIlcRmUHGP1H+268iMo+8vk/7HUmkxUV60sgre5HiJOL/iWTOIXseRzxvoYJ2D+h82UgVGAuASyegKw3FAlRr0JEExwW/Dq6nK5+7DutaINEKpSLMV21IDLSug1gXUAKpay7QArPXNEFTHZDeCPiQz8GWh2G2sMxO2NYGba4qIhrrMOapNBCorLUNWtsjYwPwCwrIOPZ2VYVUN6R6dExQBif+LzkQ+GCCZW5FopOCysS3ICPkugvt8OYTAmm8Cd0UwM0UQ9ly7ZUoOl9jBcD/4DhecwCLTsPwaxaJLciojRsAYjF9tYTneTPI2CM/FrlHeCGy7CzUWb2nWegFA8haPk4bduXVp38As02itan5XJ0AAAAASUVORK5CYIKJUE5HDQoaCgAAAA1JSERSAAAAMAAAADAIBgAAAFcC+YcAAAWMSURBVHic7Zp/iFRVFMc/9703zuiy7o9xNdO21EpN21YN/JFoqa0aaooErVkEVmZBWlGQ/aSMrAgrspIotDRKMttSCwMTKiPQFTHWUFdqTQ33pzr7a+a9uf1x3jhvdmZ0pWBmYw48eO/dd879fs89995z3nsK0LiiFD1CtI6fKzwEeqJYsROloCA/+0dBazhzLj4KllJyUZAP1VVQWAw6kn1EtAblg5YmGHs7tJwVjAkj0K8Y8oNABAmubBIN+ASw17mW95lIRLyftSOAYPRKAgGlXOAq+wiAB59HjMxA+e8kRyDTkiOQackRyLTkCGRacgQyLVa6Bq3BicavTSM5D3GceDWkANNMrYvnGSOFnaQ+PUaVEp1LI6BBBcDq7bnXSkKarTWYhcTH0AFCrq6/i65rkyjQAdFOMMzEZscB0w9WH49NDdhAW2IZeWECGvDD0SPw017xquNAxWQYOBgIu1mhCVu3SHUE0D8It90C+OK6MW8bSuyUFEP5KAheDjoUH4loVJxRXwe79sDvx6C1DQb0gxvLYOJY8JlJSEWUQgO6qADdtA+ta9G6Hr3uJbkfO5ZWyv3OGnT0BPrAtsT20deg9TG0Pp2s6z36B9Eb3kDrk2j7MNo+Iudvv4AuCabWuXchWv8l9pv2CVZAK4VOG0J+P1gmWJYUEZ9vh1WPQbBYSrt3N4kHA35pLyxI1jUMmDYJJk2GE8dg41dwuhGWPQOzp0gFqPLgzXfg0VWi7u8FC2fDyGFwugW27YTfDpO2QrzgJLYdAREISA36yVZY8SScqoHPtsnENpQ85zjJujiwsALuWwlEoHk+fPEttLXDH3VQMgTqDsFTr7v9+KHqfZgxD4l9A15eDr/sB6cNTF8yzosuo1pD5RwBunYjKAc275DYnzkFrrvaNZTGQ3+ehOMHoXon1ByFqIaiArhiEGDCd7uho1PmwaK5MGM+hE+B3Qh2PeT3hYqK9EAvSiBiw9zpML4cauvg683w6TfS9vBd4It5JQUBy4RVa6G0DMbNkVDoHYD1r8FlVwFhOFoXn8w3jYNoh6xQliWHtsEJpcfXrY2suAAerJTzpc/B3oMwfCjMuBlazqXX0xoGDYAxZTDqWgEajsCaj+DvOsDvhpq7RJqp0KgLvyDpFoGzIbhjnrw7qm+U4V62CHyFYNvp9ZwoPL4EqnfBge/hrWdlruz+Fd77GMiD0oHxfau6Bgw/OLYQs2138+vzLwm0d0LvIXDnHAGV1wcWL5C1PKXXPBLwC1CzH0wcI/d8FtQeB9ph1hSxYRqw4Us4uAf8g8EqBKtEEO6vlj0wlaRdhQwlMQgSy7oVVi6T5W3YlRAsAd0hYCwrnkZ4dQ0FP1dD/noINcMHmwRoxIbykUJgxGh44n5YvQ6az8D0xbCkEkYOhYYW2LJd7PxYBYS7S0CJ12PhEY6AikDpIFi+Aoi4O6kBDc3yXFNLat1NVXJ4ZdZUeOBucUrUgVeeFg+v+RDqm2D12sTn59/KJewDCnQ7jL8Bnn9Ebl0/XNg7NugGmYwxj698SDotHYgEc0dc13CTMWVI/0V9oWwETJ4gujoCJqDD8OqLcM8C2PEDHKqFkJtKTCiHmVNltFWKcFVKobW7NtfugqKgGFQBIDZ5WoVASi/0RWaSA5zjfC5FqokXS85CcurNSqMOGHmubiyJiLW3uZh6QXMjDJsm4ZbwcrfrKEQ7Idoml6aZPgW2m6Wz86PSRberXaXc1LxLk2GKTrQ13hZbnUyDSwihmEEFRtpWj4EUWWJ3dZP0jPTLYrp0usdXZDkCmZYcgUxLjkCmJWG11jp+ZJtod3fuii2BgM8nBbuCrPvMqtzPrL4udfF5AlpDQ5OkKln7mdX90J3yX4me+qvB/+dnD8h+78fEG0L/APuCF1jFkKUEAAAAAElFTkSuQmCC"
+
+function Install-MbcIcon {
+    try {
+        if (-not (Test-Path $script:InstallDir)) {
+            New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
+        }
+        $iconPath = "$script:InstallDir\MBC.ico"
+        if (-not (Test-Path $iconPath)) {
+            $iconBytes = [Convert]::FromBase64String($script:MbcIconBase64)
+            [System.IO.File]::WriteAllBytes($iconPath, $iconBytes)
+        }
+        return $iconPath
+    } catch {
+        return $null
+    }
+}
+
+function Install-DesktopShortcut {
+    param([string]$IconPath)
+    try {
+        $shortcutPath = [System.IO.Path]::Combine(
+            [Environment]::GetFolderPath('Desktop'),
+            'MARIUS Board Configurator.lnk'
+        )
+        if (Test-Path $shortcutPath) { return }  # Already exists - don't recreate
+
+        $wsh = New-Object -ComObject WScript.Shell
+        $sc  = $wsh.CreateShortcut($shortcutPath)
+        $sc.TargetPath       = "powershell.exe"
+        $sc.Arguments        = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
+        $sc.WorkingDirectory = $script:InstallDir
+        $sc.Description      = "MARIUS Board Configurator v$script:CurrentVersion"
+        if ($IconPath -and (Test-Path $IconPath)) {
+            $sc.IconLocation = "$IconPath,0"
+        }
+        $sc.WindowStyle = 7  # Minimized - hides the PowerShell flash
+        $sc.Save()
+    } catch {}
+}
+
+function Invoke-SelfInstall {
+    # Copy script to %APPDATA%\MARIUS if not already running from there
+    try {
+        if (-not (Test-Path $script:InstallDir)) {
+            New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
+        }
+        $runningPath = $MyInvocation.ScriptName
+        if ($runningPath -and ($runningPath -ne $script:InstallPath) -and (Test-Path $runningPath)) {
+            Copy-Item -Path $runningPath -Destination $script:InstallPath -Force -ErrorAction SilentlyContinue
+        } elseif (-not (Test-Path $script:InstallPath)) {
+            $content = (New-Object System.Net.WebClient).DownloadString($script:ScriptUrl)
+            [System.IO.File]::WriteAllText($script:InstallPath, $content, [System.Text.Encoding]::UTF8)
+        }
+    } catch {}
+}
+
+function Check-ForUpdates {
+    try {
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("Cache-Control", "no-cache")
+        $latestVersion = $wc.DownloadString($script:VersionUrl).Trim()
+
+        if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
+
+            $updateForm = New-Object System.Windows.Forms.Form
+            $updateForm.Text = "Update Available"
+            $updateForm.Width = 440
+            $updateForm.Height = 200
+            $updateForm.StartPosition = "CenterScreen"
+            $updateForm.FormBorderStyle = "None"
+            $updateForm.BackColor = [System.Drawing.Color]::Yellow
+            $updateForm.Padding = New-Object System.Windows.Forms.Padding(2)
+            $updateForm.TopMost = $true
+
+            $upanel = New-Object System.Windows.Forms.Panel
+            $upanel.Location = New-Object System.Drawing.Point(2, 2)
+            $upanel.Size = New-Object System.Drawing.Size(436, 196)
+            $upanel.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+
+            $lbl = New-Object System.Windows.Forms.Label
+            $lbl.Location = New-Object System.Drawing.Point(0, 25)
+            $lbl.Size = New-Object System.Drawing.Size(436, 55)
+            $lbl.Text = "Update Available!  v$script:CurrentVersion  ->  v$latestVersion"
+            $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+            $lbl.ForeColor = [System.Drawing.Color]::Yellow
+            $lbl.TextAlign = "MiddleCenter"
+
+            $subLbl = New-Object System.Windows.Forms.Label
+            $subLbl.Location = New-Object System.Drawing.Point(0, 78)
+            $subLbl.Size = New-Object System.Drawing.Size(436, 25)
+            $subLbl.Text = "Would you like to update now?"
+            $subLbl.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+            $subLbl.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+            $subLbl.TextAlign = "MiddleCenter"
+
+            $btnUpdate = New-Object System.Windows.Forms.Button
+            $btnUpdate.Location = New-Object System.Drawing.Point(40, 118)
+            $btnUpdate.Size = New-Object System.Drawing.Size(160, 45)
+            $btnUpdate.Text = "Update Now"
+            $btnUpdate.FlatStyle = "Flat"
+            $btnUpdate.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+            $btnUpdate.ForeColor = [System.Drawing.Color]::Yellow
+            $btnUpdate.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+            $btnUpdate.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+            $btnUpdate.FlatAppearance.BorderSize = 1
+            $btnUpdate.Cursor = [System.Windows.Forms.Cursors]::Hand
+            $btnUpdate.DialogResult = [System.Windows.Forms.DialogResult]::Yes
+
+            $btnSkip = New-Object System.Windows.Forms.Button
+            $btnSkip.Location = New-Object System.Drawing.Point(236, 118)
+            $btnSkip.Size = New-Object System.Drawing.Size(160, 45)
+            $btnSkip.Text = "Skip"
+            $btnSkip.FlatStyle = "Flat"
+            $btnSkip.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+            $btnSkip.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+            $btnSkip.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+            $btnSkip.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
+            $btnSkip.FlatAppearance.BorderSize = 1
+            $btnSkip.Cursor = [System.Windows.Forms.Cursors]::Hand
+            $btnSkip.DialogResult = [System.Windows.Forms.DialogResult]::No
+
+            $upanel.Controls.AddRange(@($lbl, $subLbl, $btnUpdate, $btnSkip))
+            $updateForm.Controls.Add($upanel)
+            $updateForm.AcceptButton = $btnUpdate
+            $updateForm.CancelButton = $btnSkip
+
+            $result = $updateForm.ShowDialog()
+            $updateForm.Dispose()
+
+            if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+                try {
+                    if (-not (Test-Path $script:InstallDir)) {
+                        New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
+                    }
+                    $wc2 = New-Object System.Net.WebClient
+                    $newScript = $wc2.DownloadString($script:ScriptUrl)
+                    [System.IO.File]::WriteAllText($script:InstallPath, $newScript, [System.Text.Encoding]::UTF8)
+                    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
+                    exit
+                } catch {
+                    [System.Windows.Forms.MessageBox]::Show(
+                        "Update failed. Please re-run the one-liner install command.",
+                        "Update Error",
+                        [System.Windows.Forms.MessageBoxButtons]::OK,
+                        [System.Windows.Forms.MessageBoxIcon]::Warning
+                    ) | Out-Null
+                }
+            }
+        }
+    } catch {
+        # No internet or version check failed - launch normally
+    }
+}
 
 # Hide PowerShell window
 Add-Type -Name Window -Namespace Console -MemberDefinition '
@@ -334,33 +504,50 @@ function Show-UsbAnalyzer {
         $script:dragging = $false
     })
 
-    $titleLabel = New-Object System.Windows.Forms.Label
-    $titleLabel.Location = New-Object System.Drawing.Point(0, 35)
-    $titleLabel.Size = New-Object System.Drawing.Size(850, 40)
-    $titleLabel.Text = "USB LATENCY ANALYZER V3"
-    $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
-    $titleLabel.ForeColor = [System.Drawing.Color]::Yellow
-    $titleLabel.TextAlign = "MiddleCenter"
-    $titleLabel.BackColor = [System.Drawing.Color]::Transparent
+    $analyzerTitlePicBox = New-Object System.Windows.Forms.PictureBox
+    $analyzerTitlePicBox.Location = New-Object System.Drawing.Point(0, 0)
+    $analyzerTitlePicBox.Size = New-Object System.Drawing.Size(850, 85)
+    $analyzerTitlePicBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
+    $analyzerTitlePicBox.BackColor = [System.Drawing.Color]::Black
 
-    $titleLabel.Add_MouseDown({
+    try {
+        $wc2 = New-Object System.Net.WebClient
+        $imgBytes2 = $wc2.DownloadData("https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/Title.png")
+        $ms2 = New-Object System.IO.MemoryStream($imgBytes2, 0, $imgBytes2.Length)
+        $analyzerTitlePicBox.Image = [System.Drawing.Image]::FromStream($ms2)
+    } catch {
+        $analyzerTitlePicBox.Add_Paint({
+            param($sender, $e)
+            $font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
+            $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+            $sf = New-Object System.Drawing.StringFormat
+            $sf.Alignment = [System.Drawing.StringAlignment]::Center
+            $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
+            $rect = New-Object System.Drawing.RectangleF(0, 0, $sender.Width, $sender.Height)
+            $e.Graphics.DrawString("USB LATENCY ANALYZER V3", $font, $brush, $rect, $sf)
+            $font.Dispose()
+            $brush.Dispose()
+        })
+    }
+
+    $analyzerTitlePicBox.Add_MouseDown({
         $script:dragging = $true
         $script:dragCursorX = [System.Windows.Forms.Cursor]::Position.X - $analyzerForm.Left
         $script:dragCursorY = [System.Windows.Forms.Cursor]::Position.Y - $analyzerForm.Top
     })
 
-    $titleLabel.Add_MouseMove({
+    $analyzerTitlePicBox.Add_MouseMove({
         if ($script:dragging) {
             $analyzerForm.Left = [System.Windows.Forms.Cursor]::Position.X - $script:dragCursorX
             $analyzerForm.Top = [System.Windows.Forms.Cursor]::Position.Y - $script:dragCursorY
         }
     })
 
-    $titleLabel.Add_MouseUp({
+    $analyzerTitlePicBox.Add_MouseUp({
         $script:dragging = $false
     })
 
-    $headerPanel.Controls.Add($titleLabel)
+    $headerPanel.Controls.Add($analyzerTitlePicBox)
     $mainPanel.Controls.Add($headerPanel)
 
     $subtitle = New-Object System.Windows.Forms.Label
@@ -653,6 +840,43 @@ function Show-UsbAnalyzer {
     
     $analyzerForm.Controls.Add($mainPanel)
 
+    # ============================================================================
+    # RGB BORDER ANIMATION TIMER (USB Analyzer - synced to main window)
+    # ============================================================================
+    $script:analyzerRgbTimer = New-Object System.Windows.Forms.Timer
+    $script:analyzerRgbTimer.Interval = 20
+
+    $script:analyzerRgbTimer.Add_Tick({
+        # Read the shared hue from the main window timer - no increment here
+        $h = $script:rgbHue / 360.0
+        $i = [Math]::Floor($h * 6)
+        $f = $h * 6 - $i
+        $q = 1 - $f
+        $t = $f
+        switch ($i % 6) {
+            0 { $r = 255; $g = [int]($t * 255); $b = 0 }
+            1 { $r = [int]($q * 255); $g = 255; $b = 0 }
+            2 { $r = 0; $g = 255; $b = [int]($t * 255) }
+            3 { $r = 0; $g = [int]($q * 255); $b = 255 }
+            4 { $r = [int]($t * 255); $g = 0; $b = 255 }
+            5 { $r = 255; $g = 0; $b = [int]($q * 255) }
+        }
+        $rgbColorA = [System.Drawing.Color]::FromArgb($r, $g, $b)
+        $analyzerForm.BackColor = $rgbColorA
+        foreach ($ctrl in $mainPanel.Controls) {
+            if ($ctrl -is [System.Windows.Forms.Button]) {
+                $ctrl.FlatAppearance.BorderColor = $rgbColorA
+            }
+        }
+    })
+
+    $script:analyzerRgbTimer.Start()
+
+    $analyzerForm.Add_FormClosed({
+        $script:analyzerRgbTimer.Stop()
+        $script:analyzerRgbTimer.Dispose()
+    })
+
     $analyzerForm.Add_KeyDown({
         param($sender, $e)
         if ($e.KeyCode -eq "Escape") {
@@ -728,6 +952,23 @@ function Invoke-GameBarNotificationFix {
 }
 
 # ============================================================================
+# STARTUP: INSTALL, ICON, SHORTCUT, UPDATE CHECK
+# ============================================================================
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# 1. Install script to %APPDATA%\MARIUS if needed
+Invoke-SelfInstall
+
+# 2. Extract MBC icon and create Desktop shortcut (first run only)
+$script:IconPath = Install-MbcIcon
+Install-DesktopShortcut -IconPath $script:IconPath
+
+# 3. Check for updates (shows prompt if newer version found)
+Check-ForUpdates
+
+# ============================================================================
 # MAIN BROWSER WINDOW
 # ============================================================================
 
@@ -740,6 +981,13 @@ $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
 $form.Padding = New-Object System.Windows.Forms.Padding(2)
+
+# Apply MBC icon to taskbar/window
+try {
+    if ($script:IconPath -and (Test-Path $script:IconPath)) {
+        $form.Icon = New-Object System.Drawing.Icon($script:IconPath)
+    }
+} catch {}
 
 $form.Add_Shown({
     $DWM_BB_ENABLE = 1
