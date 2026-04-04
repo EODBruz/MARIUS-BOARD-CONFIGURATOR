@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.2
+    Version: 3.3
     
 .CREDITS
     App Creator: @mariusheier
@@ -36,7 +36,7 @@ param(
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
 
-$script:CurrentVersion = "3.2"
+$script:CurrentVersion = "3.3"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -834,7 +834,7 @@ function Show-UsbAnalyzer {
     $analyzerCredits = New-Object System.Windows.Forms.Label
     $analyzerCredits.Location = New-Object System.Drawing.Point(0, 625)
     $analyzerCredits.Size = New-Object System.Drawing.Size(850, 25)
-    $analyzerCredits.Text = "TEST ONLY"
+    $analyzerCredits.Text = "Created by: @mariusheier | Script by: @EODBruz"
     $analyzerCredits.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $analyzerCredits.ForeColor = [System.Drawing.Color]::Red
     $analyzerCredits.TextAlign = "MiddleCenter"
@@ -1245,7 +1245,7 @@ $script:rgbTimer.Start()
 $creditsLabel = New-Object System.Windows.Forms.Label
 $creditsLabel.Location = New-Object System.Drawing.Point(0, 760)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
-$creditsLabel.Text = "TEST ONLY"
+$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
 $creditsLabel.TextAlign = "MiddleCenter"
@@ -1262,4 +1262,11 @@ $form.Add_KeyDown({
 })
 
 $form.Add_Shown({$form.Activate()})
+$form.Add_FormClosed({
+    $script:rgbTimer.Stop()
+    $script:rgbTimer.Dispose()
+    [System.Windows.Forms.Application]::Exit()
+    [Environment]::Exit(0)
+})
 [void]$form.ShowDialog()
+[Environment]::Exit(0)
