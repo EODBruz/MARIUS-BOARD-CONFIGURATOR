@@ -28,7 +28,9 @@
     - OR use the one-liner above (no warning!)
 #>
 
-param()
+param(
+    [switch]$NoUpdate  # Used internally after auto-update to prevent recheck loop
+)
 
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
@@ -182,7 +184,8 @@ function Check-ForUpdates {
                     $wc2 = New-Object System.Net.WebClient
                     $newScript = $wc2.DownloadString($script:ScriptUrl)
                     [System.IO.File]::WriteAllText($script:InstallPath, $newScript, [System.Text.Encoding]::UTF8)
-                    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
+                    Start-Sleep -Milliseconds 500
+                    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`" -NoUpdate"
                     exit
                 } catch {
                     [System.Windows.Forms.MessageBox]::Show(
@@ -965,8 +968,10 @@ Invoke-SelfInstall
 $script:IconPath = Install-MbcIcon
 Install-DesktopShortcut -IconPath $script:IconPath
 
-# 3. Check for updates (shows prompt if newer version found)
-Check-ForUpdates
+# 3. Check for updates (skipped if just updated to prevent loop)
+if (-not $NoUpdate) {
+    Check-ForUpdates
+}
 
 # ============================================================================
 # MAIN BROWSER WINDOW
