@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.3
+    Version: 3.4
     
 .CREDITS
     App Creator: @mariusheier
@@ -36,7 +36,7 @@ param(
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
 
-$script:CurrentVersion = "3.3"
+$script:CurrentVersion = "3.4"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -1262,11 +1262,11 @@ $form.Add_KeyDown({
 })
 
 $form.Add_Shown({$form.Activate()})
-$form.Add_FormClosed({
+$form.Add_FormClosing({
     $script:rgbTimer.Stop()
     $script:rgbTimer.Dispose()
-    [System.Windows.Forms.Application]::Exit()
-    [Environment]::Exit(0)
+})
+$form.Add_FormClosed({
+    [System.Diagnostics.Process]::GetCurrentProcess().Kill()
 })
 [void]$form.ShowDialog()
-[Environment]::Exit(0)
