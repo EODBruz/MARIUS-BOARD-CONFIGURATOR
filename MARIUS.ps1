@@ -36,7 +36,7 @@ param(
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
 
-$script:CurrentVersion = "3.7"
+$script:CurrentVersion = "3.8"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -922,63 +922,378 @@ function Show-UsbAnalyzer {
 # GAMEBAR NOTIFICATION FIX FUNCTION
 # ============================================================================
 
-function Invoke-GameBarNotificationFix {
-    # Check current state to show accurate status in dialog
-    $isApplied = (Get-ItemProperty "Registry::HKCR\ms-gamebar" -Name "NoOpenWith" -ErrorAction SilentlyContinue) -ne $null
-    $s6 = if ($isApplied) { "" } else { [char]0x2713 }
-    $s7 = if ($isApplied) { [char]0x2713 } else { "" }
-
-    $choice = (New-Object -ComObject Wscript.Shell).Popup(
-        "Yes to apply $s6  -  No to restore $s7",
-        0,
-        "GameBar Notification Removed",
-        0x1043
+function Show-GameBarDialog {
+    param(
+        [string]$Title,
+        [string]$Subtitle,
+        [string[]]$Lines,
+        [string]$ApplyLabel   = "",
+        [string]$RestoreLabel = "",
+        [string]$CancelLabel  = "CANCEL",
+        [bool]$IsApplied      = $false,
+        [bool]$ResultOnly     = $false
     )
 
-    # 6 = Yes (apply), 7 = No (restore), 2 = Cancel
-    if ($choice -eq 2 -or $choice -eq $null) { return }
-    $cl = if ($choice -eq 6) { 'apply' } else { 'restore' }
+    # Dimensions
+    $W = 620
+    $H = if ($ResultOnly) { 390 } else { 480 }
+
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text            = ""
+    $dlg.Width           = $W
+    $dlg.Height          = $H
+    $dlg.StartPosition   = "CenterScreen"
+    $dlg.FormBorderStyle = "None"
+    $dlg.BackColor       = [System.Drawing.Color]::Yellow   # RGB border will replace this
+    $dlg.TopMost         = $true
+
+    # Drag state
+    $script:gbDrag = $false; $script:gbDX = 0; $script:gbDY = 0
+
+    # Inner dark panel (3px inset for RGB border to show)
+    $inner = New-Object System.Windows.Forms.Panel
+    $inner.Location  = New-Object System.Drawing.Point(3, 3)
+    $inner.Size      = New-Object System.Drawing.Size(($W - 6), ($H - 6))
+    $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $dlg.Controls.Add($inner)
+
+    # ── RGB border timer (synced to main window hue) ──────────────────────────
+    $script:gbHue = if ($script:rgbHue) { $script:rgbHue } else { 0 }
+    $gbRgbTimer = New-Object System.Windows.Forms.Timer
+    $gbRgbTimer.Interval = 20
+    $gbRgbTimer.Add_Tick({
+        $script:gbHue = ($script:gbHue + 2) % 360
+        $h = $script:gbHue / 360.0
+        $i = [Math]::Floor($h * 6)
+        $f = $h * 6 - $i
+        $q = 1 - $f; $t = $f
+        switch ($i % 6) {
+            0 { $r = 255; $g = [int]($t*255); $b = 0 }
+            1 { $r = [int]($q*255); $g = 255; $b = 0 }
+            2 { $r = 0; $g = 255; $b = [int]($t*255) }
+            3 { $r = 0; $g = [int]($q*255); $b = 255 }
+            4 { $r = [int]($t*255); $g = 0; $b = 255 }
+            5 { $r = 255; $g = 0; $b = [int]($q*255) }
+        }
+        $dlg.BackColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+    })
+    $gbRgbTimer.Start()
+    $dlg.Add_FormClosed({ $gbRgbTimer.Stop(); $gbRgbTimer.Dispose() })
+
+    # ── Title bar (GDI+ painted header - matches MARIUS style) ──────────────
+    $titleBar = New-Object System.Windows.Forms.Panel
+    $titleBar.Location  = New-Object System.Drawing.Point(0, 0)
+    $titleBar.Size      = New-Object System.Drawing.Size(($W - 6), 70)
+    $titleBar.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $inner.Controls.Add($titleBar)
+
+    $titleBar.Add_MouseDown({ $script:gbDrag=$true; $script:gbDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:gbDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $titleBar.Add_MouseMove({ if($script:gbDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:gbDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:gbDY } })
+    $titleBar.Add_MouseUp({ $script:gbDrag=$false })
+
+    # PictureBox paints the title as Impact italic yellow - same as MARIUS header
+    $picTitle = New-Object System.Windows.Forms.PictureBox
+    $picTitle.Location  = New-Object System.Drawing.Point(0, 0)
+    $picTitle.Size      = New-Object System.Drawing.Size(($W - 50), 70)
+    $picTitle.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $dlgTitle = $Title
+    $picTitle.Add_Paint({
+        param($sender, $e)
+        $g = $e.Graphics
+        $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+        $shadowFont  = New-Object System.Drawing.Font("Impact", 22, [System.Drawing.FontStyle]::Italic)
+        $shadowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(80, 0, 0, 0))
+        $titleFont   = New-Object System.Drawing.Font("Impact", 22, [System.Drawing.FontStyle]::Italic)
+        $titleBrush  = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $g.DrawString($dlgTitle, $shadowFont, $shadowBrush, 22, 17)
+        $g.DrawString($dlgTitle, $titleFont,  $titleBrush,  20, 15)
+        $shadowFont.Dispose(); $shadowBrush.Dispose()
+        $titleFont.Dispose();  $titleBrush.Dispose()
+    }.GetNewClosure())
+    $picTitle.Add_MouseDown({ $script:gbDrag=$true; $script:gbDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:gbDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $picTitle.Add_MouseMove({ if($script:gbDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:gbDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:gbDY } })
+    $picTitle.Add_MouseUp({ $script:gbDrag=$false })
+    $titleBar.Controls.Add($picTitle)
+
+    # X button - plain ASCII X, no unicode issues
+    $btnX = New-Object System.Windows.Forms.Button
+    $btnX.Location  = New-Object System.Drawing.Point(($W - 52), 18)
+    $btnX.Size      = New-Object System.Drawing.Size(32, 32)
+    $btnX.Text      = "X"
+    $btnX.FlatStyle = "Flat"
+    $btnX.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
+    $btnX.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnX.FlatAppearance.BorderSize = 0
+    $btnX.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnX.Add_Click({ $dlg.Tag = "cancel"; $dlg.Close() })
+    $btnX.Add_MouseEnter({ $btnX.ForeColor = [System.Drawing.Color]::White })
+    $btnX.Add_MouseLeave({ $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140,140,140) })
+    $titleBar.Controls.Add($btnX)
+
+    # Divider line
+    $div = New-Object System.Windows.Forms.Panel
+    $div.Location  = New-Object System.Drawing.Point(0, 70)
+    $div.Size      = New-Object System.Drawing.Size(($W - 6), 2)
+    $div.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $inner.Controls.Add($div)
+
+    # Subtitle
+    $lblSub = New-Object System.Windows.Forms.Label
+    $lblSub.Location  = New-Object System.Drawing.Point(20, 82)
+    $lblSub.Size      = New-Object System.Drawing.Size(($W - 46), 26)
+    $lblSub.Text      = $Subtitle
+    $lblSub.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
+    $lblSub.ForeColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
+    $lblSub.BackColor = [System.Drawing.Color]::Transparent
+    $inner.Controls.Add($lblSub)
+
+    # Detail lines
+    $yPos = 116
+    foreach ($line in $Lines) {
+        if ($line -eq "") { $yPos += 10; continue }
+        $isHeader = $line.StartsWith("##")
+        $text = $line.TrimStart("#").Trim()
+        $lbl = New-Object System.Windows.Forms.Label
+        $lbl.Location  = New-Object System.Drawing.Point(20, $yPos)
+        $lbl.Size      = New-Object System.Drawing.Size(($W - 46), 24)
+        $lbl.Text      = $text
+        $lbl.BackColor = [System.Drawing.Color]::Transparent
+        if ($isHeader) {
+            $lbl.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+            $lbl.ForeColor = [System.Drawing.Color]::FromArgb(220, 220, 220)
+        } else {
+            $lbl.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
+            $lbl.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
+        }
+        $inner.Controls.Add($lbl)
+        $yPos += 24
+    }
+
+    if (-not $ResultOnly) {
+        # Status badge
+        $statusBg = New-Object System.Windows.Forms.Panel
+        $statusBg.Location  = New-Object System.Drawing.Point(20, ($H - 122))
+        $statusBg.Size      = New-Object System.Drawing.Size(($W - 46), 28)
+        $statusBg.BackColor = [System.Drawing.Color]::FromArgb(22, 22, 22)
+        $inner.Controls.Add($statusBg)
+
+        $badge = New-Object System.Windows.Forms.Label
+        $badge.Location  = New-Object System.Drawing.Point(0, 0)
+        $badge.Size      = New-Object System.Drawing.Size(($W - 46), 28)
+        $badge.Text      = if ($IsApplied) { "  >> STATUS: CURRENTLY APPLIED" } else { "  >> STATUS: NOT APPLIED" }
+        $badge.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+        $badge.ForeColor = if ($IsApplied) { [System.Drawing.Color]::FromArgb(80,210,80) } else { [System.Drawing.Color]::FromArgb(210,70,70) }
+        $badge.BackColor = [System.Drawing.Color]::Transparent
+        $badge.TextAlign = "MiddleLeft"
+        $statusBg.Controls.Add($badge)
+
+        # Two buttons centred, with RGB border panels behind them
+        $btnW   = 220
+        $btnH   = 50
+        $btnGap = 24
+        $btnY   = $H - 88
+        $totalW = ($btnW * 2) + $btnGap
+        $startX = [int](($W - 6 - $totalW) / 2)
+
+        # RGB wrapper panels (2px border, button sits 2px inset)
+        $rgbApplyPanel = New-Object System.Windows.Forms.Panel
+        $rgbApplyPanel.Location  = New-Object System.Drawing.Point($startX, $btnY)
+        $rgbApplyPanel.Size      = New-Object System.Drawing.Size(($btnW + 4), ($btnH + 4))
+        $rgbApplyPanel.BackColor = [System.Drawing.Color]::Yellow
+        $inner.Controls.Add($rgbApplyPanel)
+
+        $rgbRestorePanel = New-Object System.Windows.Forms.Panel
+        $rgbRestorePanel.Location  = New-Object System.Drawing.Point(($startX + $btnW + 4 + $btnGap), $btnY)
+        $rgbRestorePanel.Size      = New-Object System.Drawing.Size(($btnW + 4), ($btnH + 4))
+        $rgbRestorePanel.BackColor = [System.Drawing.Color]::Yellow
+        $inner.Controls.Add($rgbRestorePanel)
+
+        # Hook the existing RGB timer to also update the button border panels
+        $gbRgbTimer.Add_Tick({
+            $c = $dlg.BackColor
+            $rgbApplyPanel.BackColor   = $c
+            $rgbRestorePanel.BackColor = $c
+        })
+
+        $btnApply = New-Object System.Windows.Forms.Button
+        $btnApply.Location  = New-Object System.Drawing.Point(2, 2)
+        $btnApply.Size      = New-Object System.Drawing.Size($btnW, $btnH)
+        $btnApply.Text      = $ApplyLabel
+        $btnApply.FlatStyle = "Flat"
+        $btnApply.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+        $btnApply.ForeColor = [System.Drawing.Color]::Yellow
+        $btnApply.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+        $btnApply.FlatAppearance.BorderSize  = 0
+        $btnApply.Cursor    = [System.Windows.Forms.Cursors]::Hand
+        $btnApply.Add_Click({ $dlg.Tag = "apply"; $dlg.Close() })
+        $btnApply.Add_MouseEnter({ $btnApply.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 12) })
+        $btnApply.Add_MouseLeave({ $btnApply.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20) })
+        $rgbApplyPanel.Controls.Add($btnApply)
+
+        $btnRestore = New-Object System.Windows.Forms.Button
+        $btnRestore.Location  = New-Object System.Drawing.Point(2, 2)
+        $btnRestore.Size      = New-Object System.Drawing.Size($btnW, $btnH)
+        $btnRestore.Text      = $RestoreLabel
+        $btnRestore.FlatStyle = "Flat"
+        $btnRestore.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+        $btnRestore.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
+        $btnRestore.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+        $btnRestore.FlatAppearance.BorderSize  = 0
+        $btnRestore.Cursor    = [System.Windows.Forms.Cursors]::Hand
+        $btnRestore.Add_Click({ $dlg.Tag = "restore"; $dlg.Close() })
+        $btnRestore.Add_MouseEnter({ $btnRestore.BackColor = [System.Drawing.Color]::FromArgb(40, 15, 15) })
+        $btnRestore.Add_MouseLeave({ $btnRestore.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20) })
+        $rgbRestorePanel.Controls.Add($btnRestore)
+
+        # Credits
+        $lblCredits = New-Object System.Windows.Forms.Label
+        $lblCredits.Location  = New-Object System.Drawing.Point(0, ($H - 30))
+        $lblCredits.Size      = New-Object System.Drawing.Size(($W - 6), 20)
+        $lblCredits.Text      = "GameBar fix by: @FR33THY  |  Script by: @EODBruz"
+        $lblCredits.Font      = New-Object System.Drawing.Font("Segoe UI", 8)
+        $lblCredits.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+        $lblCredits.BackColor = [System.Drawing.Color]::Transparent
+        $lblCredits.TextAlign = "MiddleCenter"
+        $inner.Controls.Add($lblCredits)
+
+    } else {
+        # Single OK button centred with RGB border
+        $okBtnW = 220; $okBtnH = 50
+        $okX = [int](($W - 6 - $okBtnW - 4) / 2)
+        $okY = $H - 84
+
+        $rgbOkPanel = New-Object System.Windows.Forms.Panel
+        $rgbOkPanel.Location  = New-Object System.Drawing.Point($okX, $okY)
+        $rgbOkPanel.Size      = New-Object System.Drawing.Size(($okBtnW + 4), ($okBtnH + 4))
+        $rgbOkPanel.BackColor = [System.Drawing.Color]::Yellow
+        $inner.Controls.Add($rgbOkPanel)
+
+        $gbRgbTimer.Add_Tick({ $rgbOkPanel.BackColor = $dlg.BackColor })
+
+        $btnOk = New-Object System.Windows.Forms.Button
+        $btnOk.Location  = New-Object System.Drawing.Point(2, 2)
+        $btnOk.Size      = New-Object System.Drawing.Size($okBtnW, $okBtnH)
+        $btnOk.Text      = "OK"
+        $btnOk.FlatStyle = "Flat"
+        $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+        $btnOk.ForeColor = [System.Drawing.Color]::Yellow
+        $btnOk.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+        $btnOk.FlatAppearance.BorderSize = 0
+        $btnOk.Cursor    = [System.Windows.Forms.Cursors]::Hand
+        $btnOk.Add_Click({ $dlg.Tag = "ok"; $dlg.Close() })
+        $btnOk.Add_MouseEnter({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(40,40,12) })
+        $btnOk.Add_MouseLeave({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20,20,20) })
+        $rgbOkPanel.Controls.Add($btnOk)
+    }
+
+    $dlg.Add_KeyDown({ param($s,$e); if($e.KeyCode -eq "Escape"){ $dlg.Tag="cancel"; $dlg.Close() } })
+    [void]$dlg.ShowDialog()
+    return $dlg.Tag
+}
+
+function Invoke-GameBarNotificationFix {
+    # Check current state
+    $isApplied = (Get-ItemProperty "Registry::HKCR\ms-gamebar" -Name "NoOpenWith" -ErrorAction SilentlyContinue) -ne $null
+
+    # ── Styled confirm dialog ─────────────────────────────────────────────────
+    $choice = Show-GameBarDialog `
+        -Title        "GAMEBAR NOTIFICATION FIX" `
+        -Subtitle     "Select an action below:" `
+        -Lines        @(
+            "## What this fix does:",
+            "  [+]  Disables GameDVR and AppCapture",
+            "  [+]  Blocks controller GameBar hotkeys",
+            "  [+]  Hijacks ms-gamebar URI handlers",
+            "  [+]  Deactivates PresenceWriter service",
+            "  [+]  Kills running GameBar process",
+            "",
+            "  Recommended for 8K polling rate controllers."
+        ) `
+        -ApplyLabel   "APPLY" `
+        -RestoreLabel "RESTORE" `
+        -CancelLabel  "CANCEL" `
+        -IsApplied    $isApplied
+
+    if ($choice -eq "cancel" -or $choice -eq $null) { return }
+    $cl     = if ($choice -eq "apply") { 'apply' } else { 'restore' }
     $toggle = if ($cl -eq 'apply') { 0 } else { 1 }
 
-    # Under current user
-    sp "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" "AppCaptureEnabled" $toggle -type dword -force -ea 0
-    sp "HKCU:\System\GameConfigStore" "GameDVR_Enabled" $toggle -type dword -force -ea 0
+    # ── HKCU tweaks (no admin needed) ────────────────────────────────────────
+    sp "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" "AppCaptureEnabled"       $toggle -type dword -force -ea 0
+    sp "HKCU:\System\GameConfigStore"                            "GameDVR_Enabled"          $toggle -type dword -force -ea 0
+    sp "HKCU:\SOFTWARE\Microsoft\GameBar" "UseNexusForGameBarEnabled" $toggle -type dword -force -ea 0
+    sp "HKCU:\SOFTWARE\Microsoft\GameBar" "GamepadNexusChordEnabled"  $toggle -type dword -force -ea 0
 
-    # Admin block for HKCR registry changes
+    # ── Admin block (HKCR + HKLM changes) ────────────────────────────────────
     $psBlock = [scriptblock]::Create(@"
         `$toggle = $toggle
-        `$cl = '$cl'
+        `$cl     = '$cl'
+
         "ms-gamebar","ms-gamebarservices","ms-gamingoverlay" | ForEach-Object {
-            if (!(Test-Path "Registry::HKCR\`$_\shell")) { New-Item "Registry::HKCR\`$_\shell" -Force | Out-Null }
-            if (!(Test-Path "Registry::HKCR\`$_\shell\open")) { New-Item "Registry::HKCR\`$_\shell\open" -Force | Out-Null }
+            if (!(Test-Path "Registry::HKCR\`$_\shell"))              { New-Item "Registry::HKCR\`$_\shell"              -Force | Out-Null }
+            if (!(Test-Path "Registry::HKCR\`$_\shell\open"))         { New-Item "Registry::HKCR\`$_\shell\open"         -Force | Out-Null }
             if (!(Test-Path "Registry::HKCR\`$_\shell\open\command")) { New-Item "Registry::HKCR\`$_\shell\open\command" -Force | Out-Null }
-            Set-ItemProperty "Registry::HKCR\`$_" "(Default)" "URL:`$_" -Force
-            Set-ItemProperty "Registry::HKCR\`$_" "URL Protocol" "" -Force
+            Set-ItemProperty "Registry::HKCR\`$_" "(Default)"    "URL:`$_" -Force
+            Set-ItemProperty "Registry::HKCR\`$_" "URL Protocol" ""        -Force
             if (`$toggle -eq 0) {
-                Set-ItemProperty "Registry::HKCR\`$_" "NoOpenWith" "" -Force
-                Set-ItemProperty "Registry::HKCR\`$_\shell\open\command" "(Default)" "`"`$env:SystemRoot\System32\systray.exe`"" -Force
+                Set-ItemProperty "Registry::HKCR\`$_"                    "NoOpenWith" ""                                              -Force
+                Set-ItemProperty "Registry::HKCR\`$_\shell\open\command" "(Default)"  "`"`$env:SystemRoot\System32\systray.exe`"" -Force
             } else {
                 Remove-ItemProperty "Registry::HKCR\`$_" "NoOpenWith" -Force -ErrorAction SilentlyContinue
-                Remove-Item "Registry::HKCR\`$_\shell" -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item         "Registry::HKCR\`$_\shell" -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        `$presencePath = "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter"
+        if (Test-Path `$presencePath) {
+            Set-ItemProperty `$presencePath "ActivationType" (if (`$toggle -eq 0) { 0 } else { 1 }) -Force -ErrorAction SilentlyContinue
+        }
+
+        if (`$toggle -eq 0) {
+            Stop-Process -Force -Name GameBar -ErrorAction SilentlyContinue
+            cmd /c "sc stop GameInputSvc >nul 2>&1"
+            "gamingservices","gamingservicesnet","GameInputRedistService" | ForEach-Object {
+                Stop-Process -Name `$_ -Force -ErrorAction SilentlyContinue
             }
         }
 "@)
 
     $isAdmin = [Security.Principal.WindowsIdentity]::GetCurrent().Groups.Value -contains 'S-1-5-32-544'
-    if ($isAdmin) {
-        . $psBlock
-    } else {
+    if ($isAdmin) { . $psBlock }
+    else {
         $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($psBlock.ToString()))
         Start-Process powershell -ArgumentList "-nop -enc $encoded" -Verb RunAs -Wait -ErrorAction SilentlyContinue
     }
 
-    $msg = if ($cl -eq 'apply') {
-        "GameBar Notification fix applied!`n`nGameBar popups and ms-gamebar URI handlers have been disabled.`nThis helps prevent interference with 8K polling rate controllers."
+    # ── Styled result dialog ──────────────────────────────────────────────────
+    if ($cl -eq 'apply') {
+        Show-GameBarDialog `
+            -Title      "GAMEBAR REMOVED" `
+            -Subtitle   "All changes applied successfully." `
+            -Lines      @(
+                "## Changes applied:",
+                "  [+]  GameDVR / AppCapture disabled",
+                "  [+]  Controller GameBar hotkeys disabled",
+                "  [+]  ms-gamebar URI handlers blocked",
+                "  [+]  PresenceWriter service deactivated",
+                "  [+]  GameBar process stopped"
+            ) `
+            -ResultOnly $true | Out-Null
     } else {
-        "GameBar Notification restored.`n`nms-gamebar URI handlers have been re-enabled to their default state."
+        Show-GameBarDialog `
+            -Title      "GAMEBAR RESTORED" `
+            -Subtitle   "All changes reverted to Windows defaults." `
+            -Lines      @(
+                "## Changes restored:",
+                "  [-]  GameDVR / AppCapture re-enabled",
+                "  [-]  Controller GameBar hotkeys re-enabled",
+                "  [-]  ms-gamebar URI handlers restored",
+                "  [-]  PresenceWriter service re-activated"
+            ) `
+            -ResultOnly $true | Out-Null
     }
-    $title = if ($cl -eq 'apply') { "GameBar Notification Removed" } else { "GameBar Notification Restored" }
-    [System.Windows.Forms.MessageBox]::Show($msg, $title, [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
 }
 
 # ============================================================================
