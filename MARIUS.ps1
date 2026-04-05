@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 10000.0
+    Version: 9999.9
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,11 +35,11 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "10000.0"
+$script:CurrentVersion = "9999.9"
+$script:CurrentBuild    = "BUILD1"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:BuildFile      = "$script:InstallDir\build.txt"
-$script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 
 # ============================================================================
@@ -151,14 +151,11 @@ function Check-ForUpdates {
         $wc.Headers.Add("Cache-Control", "no-cache")
         $wc.Headers.Add("Pragma", "no-cache")
         $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
 
-        # version.txt format:
-        #   Line 1 = version number  e.g. "1.0"
-        #   Line 2 = build tag       e.g. "BUILD1"  (optional)
-        $versionLines  = $versionFileContent -split "[\r\n]+" | Where-Object { $_ -ne "" }
-        $latestVersion = $versionLines[0].Trim()
-        $remoteBuild   = if ($versionLines.Count -gt 1) { $versionLines[1].Trim() } else { "" }
+        # Download live MARIUS.ps1 from GitHub and extract version + build tag
+        $remoteScript  = $wc.DownloadString("$($script:ScriptUrl)?t=$cacheBust")
+        $latestVersion = if ($remoteScript -match '\$script:CurrentVersion\s*=\s*"([^"]+)"') { $matches[1] } else { $script:CurrentVersion }
+        $remoteBuild   = if ($remoteScript -match '\$script:CurrentBuild\s*=\s*"([^"]+)"')   { $matches[1] } else { "" }
 
         # Read local saved build tag
         $localBuild = ""
@@ -166,7 +163,7 @@ function Check-ForUpdates {
             $localBuild = (Get-Content $script:BuildFile -Raw).Trim()
         }
 
-        # Trigger update if build tag changed OR version is higher
+        # Trigger update if build tag changed OR version is different
         $buildChanged  = ($remoteBuild -ne "" -and $remoteBuild -ne $localBuild)
         $versionHigher = $false
         try { $versionHigher = ([version]$latestVersion -gt [version]$script:CurrentVersion) } catch {}
@@ -286,17 +283,14 @@ function Check-ForUpdates {
 
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
                 try {
-                    # Download new script to temp location first
+                    # Save downloaded script to temp location
                     $tempDir  = "$env:TEMP\MARIUS_UPDATE"
                     $tempFile = "$tempDir\MARIUS.ps1"
                     if (-not (Test-Path $tempDir)) {
                         New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
                     }
-                    $wc2 = New-Object System.Net.WebClient
-                    $wc2.Headers.Add("Cache-Control", "no-cache")
-                    $wc2.Headers.Add("Pragma", "no-cache")
-                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempFile)
+                    # We already have remoteScript in memory - just write it out
+                    [System.IO.File]::WriteAllText($tempFile, $remoteScript)
                     $tempSize = (Get-Item $tempFile).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
@@ -1700,7 +1694,7 @@ $script:rgbTimer.Start()
 $creditsLabel = New-Object System.Windows.Forms.Label
 $creditsLabel.Location = New-Object System.Drawing.Point(0, 760)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
-$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruzTEST"
+$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
 $creditsLabel.TextAlign = "MiddleCenter"
