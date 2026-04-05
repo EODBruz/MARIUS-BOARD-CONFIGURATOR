@@ -36,7 +36,7 @@ param(
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
 
-$script:CurrentVersion = "3.6"
+$script:CurrentVersion = "3.7"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -71,6 +71,33 @@ function Install-DesktopShortcut {
             [Environment]::GetFolderPath('Desktop'),
             'MARIUS Board Configurator.lnk'
         )
+        if (Test-Path $shortcutPath) { return }  # Already exists - don't recreate
+
+        $wsh = New-Object -ComObject WScript.Shell
+        $sc  = $wsh.CreateShortcut($shortcutPath)
+        $sc.TargetPath       = "powershell.exe"
+        $sc.Arguments        = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
+        $sc.WorkingDirectory = $script:InstallDir
+        $sc.Description      = "MARIUS Board Configurator v$script:CurrentVersion"
+        if ($IconPath -and (Test-Path $IconPath)) {
+            $sc.IconLocation = "$IconPath,0"
+        }
+        $sc.WindowStyle = 7  # Minimized - hides the PowerShell flash
+        $sc.Save()
+    } catch {}
+}
+
+function Install-StartMenuShortcut {
+    param([string]$IconPath)
+    try {
+        $startMenuDir = [System.IO.Path]::Combine(
+            [Environment]::GetFolderPath('StartMenu'),
+            'Programs'
+        )
+        if (-not (Test-Path $startMenuDir)) {
+            New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
+        }
+        $shortcutPath = [System.IO.Path]::Combine($startMenuDir, 'MARIUS Board Configurator.lnk')
         if (Test-Path $shortcutPath) { return }  # Already exists - don't recreate
 
         $wsh = New-Object -ComObject WScript.Shell
@@ -967,6 +994,7 @@ Invoke-SelfInstall
 # 2. Extract MBC icon and create Desktop shortcut (first run only)
 $script:IconPath = Install-MbcIcon
 Install-DesktopShortcut -IconPath $script:IconPath
+Install-StartMenuShortcut -IconPath $script:IconPath
 
 # 3. Check for updates (skipped if just updated to prevent loop)
 if (-not $NoUpdate) {
