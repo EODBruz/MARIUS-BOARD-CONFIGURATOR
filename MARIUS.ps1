@@ -131,10 +131,12 @@ function Invoke-SelfInstall {
         # If AppData file still does not exist, download a clean copy
         if (-not (Test-Path $script:InstallPath)) {
             $wc = New-Object System.Net.WebClient
-            $wc.Headers.Add("Cache-Control", "no-cache")
-            $tempPath = "$script:InstallPath.tmp"
-            $wc.DownloadFile($script:ScriptUrl, $tempPath)
-            $tempSize = (Get-Item $tempPath).Length
+            $wc.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
+            $wc.Headers.Add("Pragma", "no-cache")
+            $wc.Headers.Add("Expires", "0")
+            $wc.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
+            $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            $remoteScript = $wc.DownloadString("$($script:ScriptUrl)?t=$cacheBust")
             if ($tempSize -gt 10000) {
                 Move-Item -Path $tempPath -Destination $script:InstallPath -Force
             } else {
