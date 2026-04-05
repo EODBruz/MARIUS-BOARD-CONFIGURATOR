@@ -202,24 +202,24 @@ function Start-UpdateCheck {
 
             if ($data.Error) {
                 # No internet / download failed - show white
-                $script:_versionLabel.Invoke([Action]{
+                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
                     $script:_versionLabel.ForeColor = [System.Drawing.Color]::White
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion)  ?"
-                }) | Out-Null
+                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) ?"
+                })
             } elseif ($data.LocalHash -eq $data.RemoteHash) {
                 # Hashes match - up to date - GREEN
-                $script:_versionLabel.Invoke([Action]{
+                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
                     $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(0, 210, 80)
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion)  ✓"
-                }) | Out-Null
+                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) OK"
+                })
             } else {
                 # Hashes differ - update available - RED + show Update button
                 $script:RemoteBytes = $data.Bytes
-                $script:_versionLabel.Invoke([Action]{
+                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
                     $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion)  ↑"
+                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) ^"
                     $script:_updateButton.Visible   = $true
-                }) | Out-Null
+                })
             }
         } catch {}
         $script:_ps.Dispose()
@@ -1001,7 +1001,7 @@ function Show-GameBarDialog {
     $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
     $dlg.Controls.Add($inner)
 
-    # ── RGB border timer (synced to main window hue) ──────────────────────────
+    # ?? RGB border timer (synced to main window hue) ??????????????????????????
     $script:gbHue = if ($script:rgbHue) { $script:rgbHue } else { 0 }
     $gbRgbTimer = New-Object System.Windows.Forms.Timer
     $gbRgbTimer.Interval = 20
@@ -1024,7 +1024,7 @@ function Show-GameBarDialog {
     $gbRgbTimer.Start()
     $dlg.Add_FormClosed({ $gbRgbTimer.Stop(); $gbRgbTimer.Dispose() })
 
-    # ── Title bar (GDI+ painted header - matches MARIUS style) ──────────────
+    # ?? Title bar (GDI+ painted header - matches MARIUS style) ??????????????
     $titleBar = New-Object System.Windows.Forms.Panel
     $titleBar.Location  = New-Object System.Drawing.Point(0, 0)
     $titleBar.Size      = New-Object System.Drawing.Size(($W - 6), 70)
@@ -1241,7 +1241,7 @@ function Invoke-GameBarNotificationFix {
     # Check current state
     $isApplied = (Get-ItemProperty "Registry::HKCR\ms-gamebar" -Name "NoOpenWith" -ErrorAction SilentlyContinue) -ne $null
 
-    # ── Styled confirm dialog ─────────────────────────────────────────────────
+    # ?? Styled confirm dialog ?????????????????????????????????????????????????
     $choice = Show-GameBarDialog `
         -Title        "GAMEBAR NOTIFICATION FIX" `
         -Subtitle     "Select an action below:" `
@@ -1264,13 +1264,13 @@ function Invoke-GameBarNotificationFix {
     $cl     = if ($choice -eq "apply") { 'apply' } else { 'restore' }
     $toggle = if ($cl -eq 'apply') { 0 } else { 1 }
 
-    # ── HKCU tweaks (no admin needed) ────────────────────────────────────────
+    # ?? HKCU tweaks (no admin needed) ????????????????????????????????????????
     sp "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR" "AppCaptureEnabled"       $toggle -type dword -force -ea 0
     sp "HKCU:\System\GameConfigStore"                            "GameDVR_Enabled"          $toggle -type dword -force -ea 0
     sp "HKCU:\SOFTWARE\Microsoft\GameBar" "UseNexusForGameBarEnabled" $toggle -type dword -force -ea 0
     sp "HKCU:\SOFTWARE\Microsoft\GameBar" "GamepadNexusChordEnabled"  $toggle -type dword -force -ea 0
 
-    # ── Admin block (HKCR + HKLM changes) ────────────────────────────────────
+    # ?? Admin block (HKCR + HKLM changes) ????????????????????????????????????
     $psBlock = [scriptblock]::Create(@"
         `$toggle = $toggle
         `$cl     = '$cl'
@@ -1311,7 +1311,7 @@ function Invoke-GameBarNotificationFix {
         Start-Process powershell -ArgumentList "-nop -enc $encoded" -Verb RunAs -Wait -ErrorAction SilentlyContinue
     }
 
-    # ── Styled result dialog ──────────────────────────────────────────────────
+    # ?? Styled result dialog ??????????????????????????????????????????????????
     if ($cl -eq 'apply') {
         Show-GameBarDialog `
             -Title      "GAMEBAR REMOVED" `
@@ -1646,7 +1646,7 @@ $creditsLabel.BackColor = [System.Drawing.Color]::Black
 $script:versionLabel = New-Object System.Windows.Forms.Label
 $script:versionLabel.Location  = New-Object System.Drawing.Point(8, 0)
 $script:versionLabel.Size      = New-Object System.Drawing.Size(110, 35)
-$script:versionLabel.Text      = "v$script:CurrentVersion  …"
+$script:versionLabel.Text      = "v$script:CurrentVersion ..."
 $script:versionLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $script:versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
 $script:versionLabel.TextAlign = "MiddleLeft"
