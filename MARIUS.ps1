@@ -36,7 +36,7 @@ param(
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
 
-$script:CurrentVersion = "3.8"
+$script:CurrentVersion = "3.9"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
