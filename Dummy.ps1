@@ -34,7 +34,7 @@ param()
 # ============================================================================
 # VERSION & UPDATE SYSTEM (Hash-based passive checker)
 # ============================================================================
-$script:CurrentVersion = "1.5"
+$script:CurrentVersion = "1.6"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\Dummy.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/Dummy.ps1"
