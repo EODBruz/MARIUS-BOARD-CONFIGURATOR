@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.5 (Dummy test build - new updater system)
+    Version: 1.7 (Dummy test build - new updater system)
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,7 +35,7 @@ param()
 # ============================================================================
 # VERSION & UPDATE SYSTEM (Hash-based passive checker)
 # ============================================================================
-$script:CurrentVersion = "1.6"
+$script:CurrentVersion = "1.7"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\Dummy.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/Dummy.ps1"
