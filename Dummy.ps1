@@ -203,7 +203,7 @@ function Start-UpdateCheck {
             if ($data.Error) {
                 # No internet / download failed - show white
                 $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
-                    $script:_versionLabel.ForeColor = [System.Drawing.Color]::White
+                    $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
                     $script:_versionLabel.Text      = "v$($script:CurrentVersion) ?"
                 })
             } elseif ($data.LocalHash -eq $data.RemoteHash) {
@@ -1647,8 +1647,8 @@ $script:versionLabel = New-Object System.Windows.Forms.Label
 $script:versionLabel.Location  = New-Object System.Drawing.Point(8, 0)
 $script:versionLabel.Size      = New-Object System.Drawing.Size(110, 35)
 $script:versionLabel.Text      = "v$script:CurrentVersion ..."
-$script:versionLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-$script:versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(120, 120, 120)
+$script:versionLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+$script:versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
 $script:versionLabel.TextAlign = "MiddleLeft"
 $script:versionLabel.BackColor = [System.Drawing.Color]::Black
 
