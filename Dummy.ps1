@@ -145,92 +145,87 @@ function Invoke-SelfInstall {
 }
 
 function Start-UpdateCheck {
-    # Fires async after window opens - compares local file hash to GitHub hash
-    # Updates the version label colour and shows/hides Update button on the UI thread
+    # Runs hash check in a background runspace
+    # A UI timer polls every 500ms until the result is ready then updates the label
     param(
         [System.Windows.Forms.Label]$VersionLabel,
         [System.Windows.Forms.Button]$UpdateButton
     )
 
+    # Shared result hashtable - background thread writes, UI timer reads
+    $script:_updateResult = $null
+    $script:_versionLabel = $VersionLabel
+    $script:_updateButton = $UpdateButton
+
+    # Build and open runspace
     $runspace = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace()
-    $runspace.ApartmentState = "STA"
+    $runspace.ApartmentState = "MTA"
     $runspace.ThreadOptions  = "ReuseThread"
     $runspace.Open()
-
     $runspace.SessionStateProxy.SetVariable('InstallPath', $script:InstallPath)
     $runspace.SessionStateProxy.SetVariable('ScriptUrl',   $script:ScriptUrl)
 
     $ps = [System.Management.Automation.PowerShell]::Create()
     $ps.Runspace = $runspace
-
     [void]$ps.AddScript({
         try {
-            # Hash the local installed script
             $localHash = ""
             if (Test-Path $InstallPath) {
                 $localHash = (Get-FileHash -Path $InstallPath -Algorithm SHA256).Hash
             }
-
-            # Download remote script bytes into memory (reused by Update button)
             $wc = New-Object System.Net.WebClient
             $wc.Headers.Add("Cache-Control", "no-cache")
-            $wc.Headers.Add("Pragma",        "no-cache")
+            $wc.Headers.Add("Pragma", "no-cache")
             $remoteBytes = $wc.DownloadData($ScriptUrl)
-
-            # Hash the remote bytes
             $sha        = [System.Security.Cryptography.SHA256]::Create()
             $hashBytes  = $sha.ComputeHash($remoteBytes)
-            $remoteHash = [BitConverter]::ToString($hashBytes) -replace '-', ''
-
-            return @{ LocalHash = $localHash; RemoteHash = $remoteHash; Bytes = $remoteBytes; Error = $null }
+            $remoteHash = [BitConverter]::ToString($hashBytes) -replace "-", ""
+            return @{ LocalHash = $localHash; RemoteHash = $remoteHash; Bytes = $remoteBytes; Error = "" }
         } catch {
             return @{ LocalHash = ""; RemoteHash = ""; Bytes = $null; Error = $_.Exception.Message }
         }
     })
 
-    # Capture references for the callback closure
-    $script:_versionLabel = $VersionLabel
-    $script:_updateButton = $UpdateButton
-    $script:_ps           = $ps
-    $script:_runspace     = $runspace
+    # Store async handle so timer can check if done
+    $script:_asyncHandle = $ps.BeginInvoke()
+    $script:_asyncPs     = $ps
+    $script:_asyncRs     = $runspace
 
-    $callback = {
-        param($asyncResult)
+    # Timer polls every 500ms - safe because it runs on the UI thread
+    $script:_pollTimer = New-Object System.Windows.Forms.Timer
+    $script:_pollTimer.Interval = 500
+    $script:_pollTimer.Add_Tick({
+        if (-not $script:_asyncHandle.IsCompleted) { return }
+
+        # Stop polling immediately
+        $script:_pollTimer.Stop()
+        $script:_pollTimer.Dispose()
+
         try {
-            $result = $script:_ps.EndInvoke($asyncResult)
+            $result = $script:_asyncPs.EndInvoke($script:_asyncHandle)
             $data   = $result[0]
 
-            if ($data.Error) {
-                # No internet / download failed - show white
-                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
-                    $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) ?"
-                })
+            if ($data.Error -ne "") {
+                $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+                $script:_versionLabel.Text      = "v$($script:CurrentVersion) ?"
             } elseif ($data.LocalHash -eq $data.RemoteHash) {
-                # Hashes match - up to date - GREEN
-                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
-                    $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(0, 210, 80)
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) OK"
-                })
+                $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(0, 210, 80)
+                $script:_versionLabel.Text      = "v$($script:CurrentVersion) OK"
             } else {
-                # Hashes differ - update available - RED + show Update button
                 $script:RemoteBytes = $data.Bytes
-                $script:_versionLabel.BeginInvoke([System.Windows.Forms.MethodInvoker]{
-                    $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
-                    $script:_versionLabel.Text      = "v$($script:CurrentVersion) ^"
-                    $script:_updateButton.Visible   = $true
-                })
+                $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
+                $script:_versionLabel.Text      = "v$($script:CurrentVersion) UPDATE"
+                $script:_updateButton.Visible   = $true
             }
-        } catch {}
-        $script:_ps.Dispose()
-        $script:_runspace.Dispose()
-    }
+        } catch {
+            $script:_versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
+            $script:_versionLabel.Text      = "v$($script:CurrentVersion) ?"
+        }
 
-    [void]$ps.BeginInvoke(
-        [System.Management.Automation.PSDataCollection[PSObject]]::new(),
-        [System.Management.Automation.PSDataCollection[PSObject]]::new(),
-        $null, $callback, $null
-    )
+        $script:_asyncPs.Dispose()
+        $script:_asyncRs.Dispose()
+    })
+    $script:_pollTimer.Start()
 }
 
 function Invoke-Update {
@@ -1645,7 +1640,7 @@ $creditsLabel.BackColor = [System.Drawing.Color]::Black
 # Version label - bottom left, grey while checking
 $script:versionLabel = New-Object System.Windows.Forms.Label
 $script:versionLabel.Location  = New-Object System.Drawing.Point(8, 0)
-$script:versionLabel.Size      = New-Object System.Drawing.Size(110, 35)
+$script:versionLabel.Size      = New-Object System.Drawing.Size(145, 35)
 $script:versionLabel.Text      = "v$script:CurrentVersion ..."
 $script:versionLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 $script:versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
