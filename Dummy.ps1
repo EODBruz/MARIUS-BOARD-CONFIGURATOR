@@ -17,6 +17,7 @@
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Script Version Dummy Test
+    Dummy
     
 .INSTALLATION
     Quick Install (One-Liner):
