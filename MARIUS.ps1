@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.0
+    Version: 9999.9
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,12 +35,11 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "3.0"
-$script:CurrentBuild   = "BUILD2"
+$script:CurrentVersion = "9999.9"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:BuildFile      = "$script:InstallDir\build.txt"
-$script:ApiUrl         = "https://api.github.com/repos/EODBruz/MARIUS-BOARD-CONFIGURATOR/contents/MARIUS.ps1"
+$script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 
 # ============================================================================
@@ -148,22 +147,18 @@ function Invoke-SelfInstall {
 function Check-ForUpdates {
     if ($NoUpdate) { return }
     try {
-        # Use GitHub API - bypasses CDN cache completely, always returns latest
         $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("User-Agent", "MARIUS-Updater")
-        $wc.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
-        $wc.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
+        $wc.Headers.Add("Cache-Control", "no-cache")
+        $wc.Headers.Add("Pragma", "no-cache")
+        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
 
-        $apiResponse   = $wc.DownloadString($script:ApiUrl)
-        $base64Content = if ($apiResponse -match '"content"\s*:\s*"([^"]+)"') { $matches[1] } else { "" }
-        if (-not $base64Content) { return }
-
-        # Decode base64 content (GitHub API returns file as base64)
-        $remoteScript  = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64Content -replace '\s',''))
-
-        # Extract version and build tag from remote script
-        $latestVersion = if ($remoteScript -match '\$script:CurrentVersion\s*=\s*"([^"]+)"') { $matches[1] } else { $script:CurrentVersion }
-        $remoteBuild   = if ($remoteScript -match '\$script:CurrentBuild\s*=\s*"([^"]+)"')   { $matches[1] } else { "" }
+        # version.txt format:
+        #   Line 1 = version number  e.g. "1.0"
+        #   Line 2 = build tag       e.g. "BUILD1"  (optional)
+        $versionLines  = $versionFileContent -split "[\r\n]+" | Where-Object { $_ -ne "" }
+        $latestVersion = $versionLines[0].Trim()
+        $remoteBuild   = if ($versionLines.Count -gt 1) { $versionLines[1].Trim() } else { "" }
 
         # Read local saved build tag
         $localBuild = ""
@@ -291,13 +286,17 @@ function Check-ForUpdates {
 
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
                 try {
-                    # Write already-downloaded remoteScript to temp file
+                    # Download new script to temp location first
                     $tempDir  = "$env:TEMP\MARIUS_UPDATE"
                     $tempFile = "$tempDir\MARIUS.ps1"
                     if (-not (Test-Path $tempDir)) {
                         New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
                     }
-                    [System.IO.File]::WriteAllText($tempFile, $remoteScript, [System.Text.Encoding]::UTF8)
+                    $wc2 = New-Object System.Net.WebClient
+                    $wc2.Headers.Add("Cache-Control", "no-cache")
+                    $wc2.Headers.Add("Pragma", "no-cache")
+                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempFile)
                     $tempSize = (Get-Item $tempFile).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
