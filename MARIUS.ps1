@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.1Beta
+    Version: 11.0
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,7 +35,7 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "3.1Beta"
+$script:CurrentVersion = "11.0"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -150,9 +150,12 @@ function Check-ForUpdates {
         $wc.Headers.Add("Cache-Control", "no-cache")
         $wc.Headers.Add("Pragma", "no-cache")
         $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $latestVersion = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
+        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
+        $versionLines  = $versionFileContent -split "`n"
+        $latestVersion = $versionLines[0].Trim()
+        $forceUpdate   = ($versionLines.Count -gt 1 -and $versionLines[1].Trim() -eq "FORCE")
 
-        if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
+        if ($forceUpdate -or ([version]$latestVersion -gt [version]$script:CurrentVersion)) {
 
             $updateForm = New-Object System.Windows.Forms.Form
             $updateForm.Text            = "Update Available"
@@ -274,8 +277,8 @@ function Check-ForUpdates {
                     $wc2.Headers.Add("Cache-Control", "no-cache")
                     $wc2.Headers.Add("Pragma", "no-cache")
                     $tempPath = "$script:InstallPath.tmp"
-                    $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust", $tempPath)
+                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempPath)
                     $tempSize = (Get-Item $tempPath).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
