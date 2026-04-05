@@ -11,11 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.0
+    Version: 1.5
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
+    Script Version 1.5 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -35,7 +36,7 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "1.0"
+$script:CurrentVersion = "1.5"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:BuildFile      = "$script:InstallDir\build.txt"
