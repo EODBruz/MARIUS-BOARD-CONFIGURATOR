@@ -1700,7 +1700,7 @@ $script:rgbTimer.Start()
 $creditsLabel = New-Object System.Windows.Forms.Label
 $creditsLabel.Location = New-Object System.Drawing.Point(0, 760)
 $creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
-$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
+$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruzTEST"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
 $creditsLabel.TextAlign = "MiddleCenter"
