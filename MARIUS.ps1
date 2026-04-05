@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.01
+    Version: 50.0
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,7 +35,7 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "1.01"
+$script:CurrentVersion = "50.0"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -149,13 +149,9 @@ function Check-ForUpdates {
         $wc = New-Object System.Net.WebClient
         $wc.Headers.Add("Cache-Control", "no-cache")
         $wc.Headers.Add("Pragma", "no-cache")
-        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
-        $versionLines  = $versionFileContent -split "`n"
-        $latestVersion = $versionLines[0].Trim()
-        $forceUpdate   = ($versionLines.Count -gt 1 -and $versionLines[1].Trim() -eq "FORCE")
+        $latestVersion = $wc.DownloadString($script:VersionUrl).Trim()
 
-        if ($forceUpdate -or ([version]$latestVersion -gt [version]$script:CurrentVersion)) {
+        if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
 
             $updateForm = New-Object System.Windows.Forms.Form
             $updateForm.Text            = "Update Available"
@@ -277,8 +273,7 @@ function Check-ForUpdates {
                     $wc2.Headers.Add("Cache-Control", "no-cache")
                     $wc2.Headers.Add("Pragma", "no-cache")
                     $tempPath = "$script:InstallPath.tmp"
-                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempPath)
+                    $wc2.DownloadFile($script:ScriptUrl, $tempPath)
                     $tempSize = (Get-Item $tempPath).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
@@ -286,6 +281,13 @@ function Check-ForUpdates {
                     }
                     Move-Item -Path $tempPath -Destination $script:InstallPath -Force
                     Start-Sleep -Milliseconds 300
+
+                    # Delete old shortcuts so they get recreated fresh on next launch
+                    $desktopShortcut  = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'MARIUS Board Configurator.lnk')
+                    $startMenuShortcut = [System.IO.Path]::Combine([Environment]::GetFolderPath('StartMenu'), 'Programs', 'MARIUS Board Configurator.lnk')
+                    Remove-Item $desktopShortcut  -Force -ErrorAction SilentlyContinue
+                    Remove-Item $startMenuShortcut -Force -ErrorAction SilentlyContinue
+
                     Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`" -NoUpdate"
                     exit
                 } catch {
