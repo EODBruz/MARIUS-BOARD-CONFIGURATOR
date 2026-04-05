@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.2
+    Version: 1.0
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,11 +35,12 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "1.2"
-$script:CurrentBuild    = "BUILD2"
+$script:CurrentVersion = "3.0"
+$script:CurrentBuild   = "BUILD2"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:BuildFile      = "$script:InstallDir\build.txt"
+$script:ApiUrl         = "https://api.github.com/repos/EODBruz/MARIUS-BOARD-CONFIGURATOR/contents/MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 
 # ============================================================================
@@ -131,12 +132,10 @@ function Invoke-SelfInstall {
         # If AppData file still does not exist, download a clean copy
         if (-not (Test-Path $script:InstallPath)) {
             $wc = New-Object System.Net.WebClient
-            $wc.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
-            $wc.Headers.Add("Pragma", "no-cache")
-            $wc.Headers.Add("Expires", "0")
-            $wc.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
-            $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-            $remoteScript = $wc.DownloadString("$($script:ScriptUrl)?t=$cacheBust")
+            $wc.Headers.Add("Cache-Control", "no-cache")
+            $tempPath = "$script:InstallPath.tmp"
+            $wc.DownloadFile($script:ScriptUrl, $tempPath)
+            $tempSize = (Get-Item $tempPath).Length
             if ($tempSize -gt 10000) {
                 Move-Item -Path $tempPath -Destination $script:InstallPath -Force
             } else {
@@ -149,13 +148,20 @@ function Invoke-SelfInstall {
 function Check-ForUpdates {
     if ($NoUpdate) { return }
     try {
+        # Use GitHub API - bypasses CDN cache completely, always returns latest
         $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("Cache-Control", "no-cache")
-        $wc.Headers.Add("Pragma", "no-cache")
-        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $wc.Headers.Add("User-Agent", "MARIUS-Updater")
+        $wc.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
+        $wc.CachePolicy = New-Object System.Net.Cache.RequestCachePolicy([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
 
-        # Download live MARIUS.ps1 from GitHub and extract version + build tag
-        $remoteScript  = $wc.DownloadString("$($script:ScriptUrl)?t=$cacheBust")
+        $apiResponse   = $wc.DownloadString($script:ApiUrl)
+        $base64Content = if ($apiResponse -match '"content"\s*:\s*"([^"]+)"') { $matches[1] } else { "" }
+        if (-not $base64Content) { return }
+
+        # Decode base64 content (GitHub API returns file as base64)
+        $remoteScript  = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64Content -replace '\s',''))
+
+        # Extract version and build tag from remote script
         $latestVersion = if ($remoteScript -match '\$script:CurrentVersion\s*=\s*"([^"]+)"') { $matches[1] } else { $script:CurrentVersion }
         $remoteBuild   = if ($remoteScript -match '\$script:CurrentBuild\s*=\s*"([^"]+)"')   { $matches[1] } else { "" }
 
@@ -165,7 +171,7 @@ function Check-ForUpdates {
             $localBuild = (Get-Content $script:BuildFile -Raw).Trim()
         }
 
-        # Trigger update if build tag changed OR version is different
+        # Trigger update if build tag changed OR version is higher
         $buildChanged  = ($remoteBuild -ne "" -and $remoteBuild -ne $localBuild)
         $versionHigher = $false
         try { $versionHigher = ([version]$latestVersion -gt [version]$script:CurrentVersion) } catch {}
@@ -285,14 +291,13 @@ function Check-ForUpdates {
 
             if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
                 try {
-                    # Save downloaded script to temp location
+                    # Write already-downloaded remoteScript to temp file
                     $tempDir  = "$env:TEMP\MARIUS_UPDATE"
                     $tempFile = "$tempDir\MARIUS.ps1"
                     if (-not (Test-Path $tempDir)) {
                         New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
                     }
-                    # We already have remoteScript in memory - just write it out
-                    [System.IO.File]::WriteAllText($tempFile, $remoteScript)
+                    [System.IO.File]::WriteAllText($tempFile, $remoteScript, [System.Text.Encoding]::UTF8)
                     $tempSize = (Get-Item $tempFile).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
