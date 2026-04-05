@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 50.0
+    Version: 5.0
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,9 +35,10 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "50.0"
+$script:CurrentVersion = "1.0"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
+$script:BuildFile      = "$script:InstallDir\build.txt"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 
@@ -149,9 +150,28 @@ function Check-ForUpdates {
         $wc = New-Object System.Net.WebClient
         $wc.Headers.Add("Cache-Control", "no-cache")
         $wc.Headers.Add("Pragma", "no-cache")
-        $latestVersion = $wc.DownloadString($script:VersionUrl).Trim()
+        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
 
-        if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
+        # version.txt format:
+        #   Line 1 = version number  e.g. "1.0"
+        #   Line 2 = build tag       e.g. "BUILD1"  (optional)
+        $versionLines  = $versionFileContent -split "[\r\n]+" | Where-Object { $_ -ne "" }
+        $latestVersion = $versionLines[0].Trim()
+        $remoteBuild   = if ($versionLines.Count -gt 1) { $versionLines[1].Trim() } else { "" }
+
+        # Read local saved build tag
+        $localBuild = ""
+        if (Test-Path $script:BuildFile) {
+            $localBuild = (Get-Content $script:BuildFile -Raw).Trim()
+        }
+
+        # Trigger update if build tag changed OR version is higher
+        $buildChanged  = ($remoteBuild -ne "" -and $remoteBuild -ne $localBuild)
+        $versionHigher = $false
+        try { $versionHigher = ([version]$latestVersion -gt [version]$script:CurrentVersion) } catch {}
+
+        if ($buildChanged -or $versionHigher) {
 
             $updateForm = New-Object System.Windows.Forms.Form
             $updateForm.Text            = "Update Available"
@@ -273,21 +293,27 @@ function Check-ForUpdates {
                     $wc2.Headers.Add("Cache-Control", "no-cache")
                     $wc2.Headers.Add("Pragma", "no-cache")
                     $tempPath = "$script:InstallPath.tmp"
-                    $wc2.DownloadFile($script:ScriptUrl, $tempPath)
+                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempPath)
                     $tempSize = (Get-Item $tempPath).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
                         throw "Downloaded file too small - likely corrupted."
                     }
                     Move-Item -Path $tempPath -Destination $script:InstallPath -Force
-                    Start-Sleep -Milliseconds 300
+
+                    # Save the new build tag so we don't prompt again
+                    if ($remoteBuild -ne "") {
+                        Set-Content -Path $script:BuildFile -Value $remoteBuild -Force -ErrorAction SilentlyContinue
+                    }
 
                     # Delete old shortcuts so they get recreated fresh on next launch
-                    $desktopShortcut  = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'MARIUS Board Configurator.lnk')
+                    $desktopShortcut   = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'MARIUS Board Configurator.lnk')
                     $startMenuShortcut = [System.IO.Path]::Combine([Environment]::GetFolderPath('StartMenu'), 'Programs', 'MARIUS Board Configurator.lnk')
-                    Remove-Item $desktopShortcut  -Force -ErrorAction SilentlyContinue
+                    Remove-Item $desktopShortcut   -Force -ErrorAction SilentlyContinue
                     Remove-Item $startMenuShortcut -Force -ErrorAction SilentlyContinue
 
+                    Start-Sleep -Milliseconds 300
                     Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`" -NoUpdate"
                     exit
                 } catch {
