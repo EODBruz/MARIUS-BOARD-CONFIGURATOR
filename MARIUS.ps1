@@ -139,66 +139,112 @@ function Check-ForUpdates {
         if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
 
             $updateForm = New-Object System.Windows.Forms.Form
-            $updateForm.Text = "Update Available"
-            $updateForm.Width = 440
-            $updateForm.Height = 200
-            $updateForm.StartPosition = "CenterScreen"
+            $updateForm.Text            = "Update Available"
+            $updateForm.Width           = 460
+            $updateForm.Height          = 220
+            $updateForm.StartPosition   = "CenterScreen"
             $updateForm.FormBorderStyle = "None"
-            $updateForm.BackColor = [System.Drawing.Color]::Yellow
-            $updateForm.Padding = New-Object System.Windows.Forms.Padding(2)
-            $updateForm.TopMost = $true
+            $updateForm.BackColor       = [System.Drawing.Color]::Yellow
+            $updateForm.Padding         = New-Object System.Windows.Forms.Padding(2)
+            $updateForm.TopMost         = $true
 
             $upanel = New-Object System.Windows.Forms.Panel
-            $upanel.Location = New-Object System.Drawing.Point(2, 2)
-            $upanel.Size = New-Object System.Drawing.Size(436, 196)
+            $upanel.Location  = New-Object System.Drawing.Point(2, 2)
+            $upanel.Size      = New-Object System.Drawing.Size(456, 216)
             $upanel.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
 
-            $lbl = New-Object System.Windows.Forms.Label
-            $lbl.Location = New-Object System.Drawing.Point(0, 25)
-            $lbl.Size = New-Object System.Drawing.Size(436, 55)
-            $lbl.Text = "Update Available!  v$script:CurrentVersion  ->  v$latestVersion"
-            $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-            $lbl.ForeColor = [System.Drawing.Color]::Yellow
-            $lbl.TextAlign = "MiddleCenter"
+            # Title label
+            $lblTitle = New-Object System.Windows.Forms.Label
+            $lblTitle.Location  = New-Object System.Drawing.Point(0, 18)
+            $lblTitle.Size      = New-Object System.Drawing.Size(456, 30)
+            $lblTitle.Text      = "Update Available!"
+            $lblTitle.Font      = New-Object System.Drawing.Font("Segoe UI", 13, [System.Drawing.FontStyle]::Bold)
+            $lblTitle.ForeColor = [System.Drawing.Color]::Yellow
+            $lblTitle.TextAlign = "MiddleCenter"
 
+            # Version arrow label
+            $lblVersion = New-Object System.Windows.Forms.Label
+            $lblVersion.Location  = New-Object System.Drawing.Point(0, 52)
+            $lblVersion.Size      = New-Object System.Drawing.Size(456, 28)
+            $lblVersion.Text      = "v$script:CurrentVersion   >>>   v$latestVersion"
+            $lblVersion.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+            $lblVersion.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+            $lblVersion.TextAlign = "MiddleCenter"
+
+            # Subtitle label
             $subLbl = New-Object System.Windows.Forms.Label
-            $subLbl.Location = New-Object System.Drawing.Point(0, 78)
-            $subLbl.Size = New-Object System.Drawing.Size(436, 25)
-            $subLbl.Text = "Would you like to update now?"
-            $subLbl.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-            $subLbl.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+            $subLbl.Location  = New-Object System.Drawing.Point(0, 86)
+            $subLbl.Size      = New-Object System.Drawing.Size(456, 22)
+            $subLbl.Text      = "Would you like to update now?"
+            $subLbl.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
+            $subLbl.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
             $subLbl.TextAlign = "MiddleCenter"
 
+            # Update Now button
             $btnUpdate = New-Object System.Windows.Forms.Button
-            $btnUpdate.Location = New-Object System.Drawing.Point(40, 118)
-            $btnUpdate.Size = New-Object System.Drawing.Size(160, 45)
-            $btnUpdate.Text = "Update Now"
+            $btnUpdate.Location  = New-Object System.Drawing.Point(48, 128)
+            $btnUpdate.Size      = New-Object System.Drawing.Size(165, 46)
+            $btnUpdate.Text      = "Update Now"
             $btnUpdate.FlatStyle = "Flat"
             $btnUpdate.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
             $btnUpdate.ForeColor = [System.Drawing.Color]::Yellow
-            $btnUpdate.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+            $btnUpdate.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
             $btnUpdate.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-            $btnUpdate.FlatAppearance.BorderSize = 1
-            $btnUpdate.Cursor = [System.Windows.Forms.Cursors]::Hand
+            $btnUpdate.FlatAppearance.BorderSize  = 1
+            $btnUpdate.Cursor       = [System.Windows.Forms.Cursors]::Hand
             $btnUpdate.DialogResult = [System.Windows.Forms.DialogResult]::Yes
 
+            # Skip button
             $btnSkip = New-Object System.Windows.Forms.Button
-            $btnSkip.Location = New-Object System.Drawing.Point(236, 118)
-            $btnSkip.Size = New-Object System.Drawing.Size(160, 45)
-            $btnSkip.Text = "Skip"
+            $btnSkip.Location  = New-Object System.Drawing.Point(243, 128)
+            $btnSkip.Size      = New-Object System.Drawing.Size(165, 46)
+            $btnSkip.Text      = "Skip"
             $btnSkip.FlatStyle = "Flat"
             $btnSkip.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-            $btnSkip.ForeColor = [System.Drawing.Color]::FromArgb(180, 180, 180)
-            $btnSkip.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-            $btnSkip.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
-            $btnSkip.FlatAppearance.BorderSize = 1
-            $btnSkip.Cursor = [System.Windows.Forms.Cursors]::Hand
+            $btnSkip.ForeColor = [System.Drawing.Color]::Red
+            $btnSkip.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+            $btnSkip.FlatAppearance.BorderColor = [System.Drawing.Color]::Red
+            $btnSkip.FlatAppearance.BorderSize  = 1
+            $btnSkip.Cursor       = [System.Windows.Forms.Cursors]::Hand
             $btnSkip.DialogResult = [System.Windows.Forms.DialogResult]::No
 
-            $upanel.Controls.AddRange(@($lbl, $subLbl, $btnUpdate, $btnSkip))
+            $upanel.Controls.AddRange(@($lblTitle, $lblVersion, $subLbl, $btnUpdate, $btnSkip))
             $updateForm.Controls.Add($upanel)
             $updateForm.AcceptButton = $btnUpdate
             $updateForm.CancelButton = $btnSkip
+
+            # RGB animation timer - .GetNewClosure() captures all local controls
+            $script:updateRgbHue = 0
+            $updateRgbTimer = New-Object System.Windows.Forms.Timer
+            $updateRgbTimer.Interval = 20
+            $updateRgbTimer.Add_Tick({
+                $script:updateRgbHue = ($script:updateRgbHue + 2) % 360
+                $h = $script:updateRgbHue / 360.0
+                $i = [Math]::Floor($h * 6)
+                $f = $h * 6 - $i
+                $q = 1 - $f
+                $t = $f
+                switch ($i % 6) {
+                    0 { $r = 255; $g = [int]($t * 255); $b = 0 }
+                    1 { $r = [int]($q * 255); $g = 255; $b = 0 }
+                    2 { $r = 0; $g = 255; $b = [int]($t * 255) }
+                    3 { $r = 0; $g = [int]($q * 255); $b = 255 }
+                    4 { $r = [int]($t * 255); $g = 0; $b = 255 }
+                    5 { $r = 255; $g = 0; $b = [int]($q * 255) }
+                }
+                $rgbColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+                $updateForm.BackColor                 = $rgbColor
+                $lblTitle.ForeColor                   = $rgbColor
+                $lblVersion.ForeColor                 = $rgbColor
+                $subLbl.ForeColor                     = $rgbColor
+                $btnUpdate.ForeColor                  = $rgbColor
+                $btnUpdate.FlatAppearance.BorderColor = $rgbColor
+                $btnSkip.ForeColor                    = $rgbColor
+                $btnSkip.FlatAppearance.BorderColor   = $rgbColor
+            }.GetNewClosure())
+
+            $updateForm.Add_Shown({ $updateRgbTimer.Start() })
+            $updateForm.Add_FormClosing({ $updateRgbTimer.Stop(); $updateRgbTimer.Dispose() })
 
             $result = $updateForm.ShowDialog()
             $updateForm.Dispose()
