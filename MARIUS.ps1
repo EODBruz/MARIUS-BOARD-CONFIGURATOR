@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 4.6
+    Version: 5.0
     
 .CREDITS
     App Creator: @mariusheier
