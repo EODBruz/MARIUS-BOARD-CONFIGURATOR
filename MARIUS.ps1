@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 10000.1
+    Version: 1.0
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,8 +35,8 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "10000.1"
-$script:CurrentBuild    = "BUILD1"
+$script:CurrentVersion = "1.0"
+$script:CurrentBuild    = "BUILD2"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:BuildFile      = "$script:InstallDir\build.txt"
