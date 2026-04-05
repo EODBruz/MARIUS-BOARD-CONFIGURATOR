@@ -253,9 +253,17 @@ function Invoke-Update {
         # Overwrite local script with remote bytes - no temp file, no folder wipe
         [System.IO.File]::WriteAllBytes($script:InstallPath, $script:RemoteBytes)
 
-        # Relaunch updated script and exit current instance
-        Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
-        exit
+        # Use a timer to relaunch after a short delay then close the form cleanly
+        # This avoids the ExitException caused by calling exit inside a WinForms event handler
+        $script:_relaunchTimer = New-Object System.Windows.Forms.Timer
+        $script:_relaunchTimer.Interval = 600
+        $script:_relaunchTimer.Add_Tick({
+            $script:_relaunchTimer.Stop()
+            $script:_relaunchTimer.Dispose()
+            Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`""
+            $script:form.Close()
+        })
+        $script:_relaunchTimer.Start()
     } catch {
         $UpdateButton.Enabled = $true
         $UpdateButton.Text    = "Update"
