@@ -11,7 +11,7 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 9.1
+    Version: 9.5
     
 .CREDITS
     App Creator: @mariusheier
@@ -35,7 +35,7 @@ param(
 # ============================================================================
 # VERSION & AUTO-UPDATE SYSTEM
 # ============================================================================
-$script:CurrentVersion = "9.1"
+$script:CurrentVersion = "9.5"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
@@ -149,7 +149,8 @@ function Check-ForUpdates {
         $wc = New-Object System.Net.WebClient
         $wc.Headers.Add("Cache-Control", "no-cache")
         $wc.Headers.Add("Pragma", "no-cache")
-        $latestVersion = $wc.DownloadString($script:VersionUrl).Trim()
+        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $latestVersion = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
 
         if ([version]$latestVersion -gt [version]$script:CurrentVersion) {
 
@@ -273,7 +274,8 @@ function Check-ForUpdates {
                     $wc2.Headers.Add("Cache-Control", "no-cache")
                     $wc2.Headers.Add("Pragma", "no-cache")
                     $tempPath = "$script:InstallPath.tmp"
-                    $wc2.DownloadFile($script:ScriptUrl, $tempPath)
+                    $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust", $tempPath)
                     $tempSize = (Get-Item $tempPath).Length
                     if ($tempSize -lt 10000) {
                         Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
