@@ -1632,10 +1632,10 @@ $bottomPanel.Location  = New-Object System.Drawing.Point(0, 755)
 $bottomPanel.Size      = New-Object System.Drawing.Size(850, 35)
 $bottomPanel.BackColor = [System.Drawing.Color]::Black
 
-# Credits label - centred
+# Credits label - centred but starts after version label space (left 210px reserved)
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location  = New-Object System.Drawing.Point(0, 0)
-$creditsLabel.Size      = New-Object System.Drawing.Size(850, 35)
+$creditsLabel.Location  = New-Object System.Drawing.Point(210, 0)
+$creditsLabel.Size      = New-Object System.Drawing.Size(430, 35)
 $creditsLabel.Text      = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
