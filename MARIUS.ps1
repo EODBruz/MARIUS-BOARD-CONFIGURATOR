@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 1.5
+    Version: 3.0
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 1.5 Final
+    Script Version 3.0 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -29,19 +29,113 @@
     - OR use the one-liner above (no warning!)
 #>
 
-param(
-    [switch]$NoUpdate  # Used internally after auto-update to prevent recheck loop
-)
-
 # ============================================================================
-# VERSION & AUTO-UPDATE SYSTEM
+# INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "1.5"
+$script:CurrentVersion = "3.0"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
-$script:BuildFile      = "$script:InstallDir\build.txt"
-$script:VersionUrl     = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/version.txt"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
+$script:ReleasesApi    = "https://api.github.com/repos/EODBruz/MARIUS-BOARD-CONFIGURATOR/releases/latest"
+
+# ============================================================================
+# SILENT AUTO-UPDATER
+# ============================================================================
+function Write-UpdateLog {
+    param([string]$Message)
+    $logFile = "$script:InstallDir\update.log"
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Add-Content -Path $logFile -Value "[$timestamp] $Message" -ErrorAction SilentlyContinue
+}
+
+function Invoke-SilentUpdate {
+    try {
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("User-Agent", "MARIUS-Updater")
+
+        # Query GitHub releases API for latest release
+        $json        = $wc.DownloadString($script:ReleasesApi)
+        $tagLine     = (($json -split '"tag_name"\s*:\s*"')[1] -split '"')[0].TrimStart('vV')
+        $assetBlock  = ($json -split '"browser_download_url"\s*:\s*"')[1]
+        $downloadUrl = ($assetBlock -split '"')[0]
+
+        # If no .ps1 asset on the release, fall back to downloading from main branch
+        if (-not $downloadUrl -or $downloadUrl -notlike "*.ps1") {
+            Write-UpdateLog "No .ps1 asset found in latest release (tag: $tagLine) - falling back to main branch"
+            $downloadUrl = $script:ScriptUrl
+
+            # Read the version from the main branch script to do a proper version compare
+            try {
+                $mainScript = $wc.DownloadString($script:ScriptUrl)
+                $mainVerLine = ($mainScript -split "`n" | Where-Object { $_ -match '^\$script:CurrentVersion\s*=' } | Select-Object -First 1)
+                $tagLine = ($mainVerLine -replace '.*=\s*"([^"]+)".*', '$1').Trim()
+                Write-UpdateLog "Main branch reports version: $tagLine"
+            } catch {
+                Write-UpdateLog "Could not read version from main branch - skipping update"
+                return
+            }
+        }
+
+        # Compare versions - bail if already up to date
+        $isNewer = $false
+        try { $isNewer = ([version]$tagLine -gt [version]$script:CurrentVersion) } catch {}
+        if (-not $isNewer) {
+            Write-UpdateLog "Already on v$script:CurrentVersion - latest is v$tagLine - no update needed"
+            return
+        }
+
+        Write-UpdateLog "Update found: v$script:CurrentVersion -> v$tagLine - downloading from $downloadUrl"
+
+        # Download to temp file
+        $tempFile = "$env:TEMP\MARIUS_update_$tagLine.ps1"
+        $wc.DownloadFile($downloadUrl, $tempFile)
+
+        # Validate the download actually landed and is a real script
+        if (-not (Test-Path $tempFile)) {
+            Write-UpdateLog "FAILED - temp file missing after download"
+            return
+        }
+        $downloadedSize = (Get-Item $tempFile).Length
+        if ($downloadedSize -lt 10000) {
+            Write-UpdateLog "FAILED - downloaded file too small ($downloadedSize bytes) - aborting"
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            return
+        }
+
+        Write-UpdateLog "Download OK - $downloadedSize bytes - swapping files"
+
+        # Remove old script first, then copy (not move) so temp survives a failure
+        Remove-Item -Path $script:InstallPath -Force -ErrorAction SilentlyContinue
+        Copy-Item   -Path $tempFile -Destination $script:InstallPath -Force
+        Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+
+        # Verify the new file is actually in place before relaunching
+        if (-not (Test-Path $script:InstallPath)) {
+            Write-UpdateLog "FAILED - new script not found at install path after copy"
+            return
+        }
+        $installedSize = (Get-Item $script:InstallPath).Length
+        if ($installedSize -lt 10000) {
+            Write-UpdateLog "FAILED - installed file too small ($installedSize bytes)"
+            return
+        }
+
+        Write-UpdateLog "SUCCESS - v$tagLine installed ($installedSize bytes) - relaunching"
+
+        Write-UpdateLog "Launching via schtasks"
+
+        # Use cmd /c start to launch fully detached from this process
+        $installPathEscaped = $script:InstallPath
+        $args = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$installPathEscaped`""
+        [System.Diagnostics.Process]::Start("cmd.exe", "/c start powershell.exe $args") | Out-Null
+        Start-Sleep -Milliseconds 3000
+        [System.Diagnostics.Process]::GetCurrentProcess().Kill()
+
+    } catch {
+        Write-UpdateLog "ERROR - $($_.Exception.Message)"
+        # No internet or API error - silently continue with current version
+    }
+}
 
 # ============================================================================
 # EMBEDDED MBC ICON (Yellow + Black, Base64 encoded ICO)
@@ -143,203 +237,6 @@ function Invoke-SelfInstall {
             }
         }
     } catch {}
-}
-
-function Check-ForUpdates {
-    if ($NoUpdate) { return }
-    try {
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("Cache-Control", "no-cache")
-        $wc.Headers.Add("Pragma", "no-cache")
-        $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $versionFileContent = $wc.DownloadString("$($script:VersionUrl)?t=$cacheBust").Trim()
-
-        # version.txt format:
-        #   Line 1 = version number  e.g. "1.0"
-        #   Line 2 = build tag       e.g. "BUILD1"  (optional)
-        $versionLines  = $versionFileContent -split "[\r\n]+" | Where-Object { $_ -ne "" }
-        $latestVersion = $versionLines[0].Trim()
-        $remoteBuild   = if ($versionLines.Count -gt 1) { $versionLines[1].Trim() } else { "" }
-
-        # Read local saved build tag
-        $localBuild = ""
-        if (Test-Path $script:BuildFile) {
-            $localBuild = (Get-Content $script:BuildFile -Raw).Trim()
-        }
-
-        # Trigger update if build tag changed OR version is higher
-        $buildChanged  = ($remoteBuild -ne "" -and $remoteBuild -ne $localBuild)
-        $versionHigher = $false
-        try { $versionHigher = ([version]$latestVersion -gt [version]$script:CurrentVersion) } catch {}
-
-        if ($buildChanged -or $versionHigher) {
-
-            $updateForm = New-Object System.Windows.Forms.Form
-            $updateForm.Text            = "Update Available"
-            $updateForm.Width           = 460
-            $updateForm.Height          = 220
-            $updateForm.StartPosition   = "CenterScreen"
-            $updateForm.FormBorderStyle = "None"
-            $updateForm.BackColor       = [System.Drawing.Color]::Yellow
-            $updateForm.Padding         = New-Object System.Windows.Forms.Padding(2)
-            $updateForm.TopMost         = $true
-
-            $upanel = New-Object System.Windows.Forms.Panel
-            $upanel.Location  = New-Object System.Drawing.Point(2, 2)
-            $upanel.Size      = New-Object System.Drawing.Size(456, 216)
-            $upanel.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
-
-            # Title label
-            $lblTitle = New-Object System.Windows.Forms.Label
-            $lblTitle.Location  = New-Object System.Drawing.Point(0, 18)
-            $lblTitle.Size      = New-Object System.Drawing.Size(456, 30)
-            $lblTitle.Text      = "Update Available!"
-            $lblTitle.Font      = New-Object System.Drawing.Font("Segoe UI", 13, [System.Drawing.FontStyle]::Bold)
-            $lblTitle.ForeColor = [System.Drawing.Color]::Yellow
-            $lblTitle.TextAlign = "MiddleCenter"
-
-            # Version arrow label
-            $lblVersion = New-Object System.Windows.Forms.Label
-            $lblVersion.Location  = New-Object System.Drawing.Point(0, 52)
-            $lblVersion.Size      = New-Object System.Drawing.Size(456, 28)
-            $lblVersion.Text      = "v$script:CurrentVersion   >>>   v$latestVersion"
-            $lblVersion.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
-            $lblVersion.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
-            $lblVersion.TextAlign = "MiddleCenter"
-
-            # Subtitle label
-            $subLbl = New-Object System.Windows.Forms.Label
-            $subLbl.Location  = New-Object System.Drawing.Point(0, 86)
-            $subLbl.Size      = New-Object System.Drawing.Size(456, 22)
-            $subLbl.Text      = "Would you like to update now?"
-            $subLbl.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
-            $subLbl.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
-            $subLbl.TextAlign = "MiddleCenter"
-
-            # Update Now button
-            $btnUpdate = New-Object System.Windows.Forms.Button
-            $btnUpdate.Location  = New-Object System.Drawing.Point(48, 128)
-            $btnUpdate.Size      = New-Object System.Drawing.Size(165, 46)
-            $btnUpdate.Text      = "Update Now"
-            $btnUpdate.FlatStyle = "Flat"
-            $btnUpdate.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-            $btnUpdate.ForeColor = [System.Drawing.Color]::Yellow
-            $btnUpdate.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-            $btnUpdate.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-            $btnUpdate.FlatAppearance.BorderSize  = 1
-            $btnUpdate.Cursor       = [System.Windows.Forms.Cursors]::Hand
-            $btnUpdate.DialogResult = [System.Windows.Forms.DialogResult]::Yes
-
-            # Skip button
-            $btnSkip = New-Object System.Windows.Forms.Button
-            $btnSkip.Location  = New-Object System.Drawing.Point(243, 128)
-            $btnSkip.Size      = New-Object System.Drawing.Size(165, 46)
-            $btnSkip.Text      = "Skip"
-            $btnSkip.FlatStyle = "Flat"
-            $btnSkip.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
-            $btnSkip.ForeColor = [System.Drawing.Color]::Red
-            $btnSkip.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-            $btnSkip.FlatAppearance.BorderColor = [System.Drawing.Color]::Red
-            $btnSkip.FlatAppearance.BorderSize  = 1
-            $btnSkip.Cursor       = [System.Windows.Forms.Cursors]::Hand
-            $btnSkip.DialogResult = [System.Windows.Forms.DialogResult]::No
-
-            $upanel.Controls.AddRange(@($lblTitle, $lblVersion, $subLbl, $btnUpdate, $btnSkip))
-            $updateForm.Controls.Add($upanel)
-            $updateForm.AcceptButton = $btnUpdate
-            $updateForm.CancelButton = $btnSkip
-
-            # RGB animation timer - .GetNewClosure() captures all local controls
-            $script:updateRgbHue = 0
-            $updateRgbTimer = New-Object System.Windows.Forms.Timer
-            $updateRgbTimer.Interval = 20
-            $updateRgbTimer.Add_Tick({
-                $script:updateRgbHue = ($script:updateRgbHue + 2) % 360
-                $h = $script:updateRgbHue / 360.0
-                $i = [Math]::Floor($h * 6)
-                $f = $h * 6 - $i
-                $q = 1 - $f
-                $t = $f
-                switch ($i % 6) {
-                    0 { $r = 255; $g = [int]($t * 255); $b = 0 }
-                    1 { $r = [int]($q * 255); $g = 255; $b = 0 }
-                    2 { $r = 0; $g = 255; $b = [int]($t * 255) }
-                    3 { $r = 0; $g = [int]($q * 255); $b = 255 }
-                    4 { $r = [int]($t * 255); $g = 0; $b = 255 }
-                    5 { $r = 255; $g = 0; $b = [int]($q * 255) }
-                }
-                $rgbColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
-                $updateForm.BackColor                 = $rgbColor
-                $lblTitle.ForeColor                   = $rgbColor
-                $lblVersion.ForeColor                 = $rgbColor
-                $subLbl.ForeColor                     = $rgbColor
-                $btnUpdate.ForeColor                  = $rgbColor
-                $btnUpdate.FlatAppearance.BorderColor = $rgbColor
-                $btnSkip.ForeColor                    = $rgbColor
-                $btnSkip.FlatAppearance.BorderColor   = $rgbColor
-            }.GetNewClosure())
-
-            $updateForm.Add_Shown({ $updateRgbTimer.Start() })
-            $updateForm.Add_FormClosing({ $updateRgbTimer.Stop(); $updateRgbTimer.Dispose() })
-
-            $result = $updateForm.ShowDialog()
-            $updateForm.Dispose()
-
-            if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                try {
-                    # Download new script to temp location first
-                    $tempDir  = "$env:TEMP\MARIUS_UPDATE"
-                    $tempFile = "$tempDir\MARIUS.ps1"
-                    if (-not (Test-Path $tempDir)) {
-                        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-                    }
-                    $wc2 = New-Object System.Net.WebClient
-                    $wc2.Headers.Add("Cache-Control", "no-cache")
-                    $wc2.Headers.Add("Pragma", "no-cache")
-                    $cacheBust2 = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-                    $wc2.DownloadFile("$($script:ScriptUrl)?t=$cacheBust2", $tempFile)
-                    $tempSize = (Get-Item $tempFile).Length
-                    if ($tempSize -lt 10000) {
-                        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-                        throw "Downloaded file too small - likely corrupted."
-                    }
-
-                    # Wipe entire MARIUS AppData folder
-                    if (Test-Path $script:InstallDir) {
-                        Remove-Item -Path $script:InstallDir -Recurse -Force -ErrorAction SilentlyContinue
-                    }
-
-                    # Delete desktop and start menu shortcuts
-                    $desktopShortcut   = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'MARIUS Board Configurator.lnk')
-                    $startMenuShortcut = [System.IO.Path]::Combine([Environment]::GetFolderPath('StartMenu'), 'Programs', 'MARIUS Board Configurator.lnk')
-                    Remove-Item $desktopShortcut   -Force -ErrorAction SilentlyContinue
-                    Remove-Item $startMenuShortcut -Force -ErrorAction SilentlyContinue
-
-                    # Recreate install dir and move new script in
-                    New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
-                    Move-Item -Path $tempFile -Destination $script:InstallPath -Force
-
-                    # Save build tag so update is not triggered again
-                    if ($remoteBuild -ne "") {
-                        Set-Content -Path $script:BuildFile -Value $remoteBuild -Force -ErrorAction SilentlyContinue
-                    }
-
-                    Start-Sleep -Milliseconds 300
-                    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:InstallPath`" -NoUpdate"
-                    exit
-                } catch {
-                    [System.Windows.Forms.MessageBox]::Show(
-                        "Update download failed:`n$_`n`nPlease re-run the one-liner install command.",
-                        "Update Failed",
-                        [System.Windows.Forms.MessageBoxButtons]::OK,
-                        [System.Windows.Forms.MessageBoxIcon]::Warning
-                    ) | Out-Null
-                }
-            }
-        }
-    } catch {
-        # Silently skip if no internet - do not bother the user
-    }
 }
 
 # Hide PowerShell window
@@ -1424,11 +1321,6 @@ $script:IconPath = Install-MbcIcon
 Install-DesktopShortcut -IconPath $script:IconPath
 Install-StartMenuShortcut -IconPath $script:IconPath
 
-# 3. Check for updates (skipped if just updated to prevent loop)
-if (-not $NoUpdate) {
-    Check-ForUpdates
-}
-
 # ============================================================================
 # MAIN BROWSER WINDOW
 # ============================================================================
@@ -1437,7 +1329,7 @@ $script:form = New-Object System.Windows.Forms.Form
 $form = $script:form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 793
+$form.Height = 762
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -1464,7 +1356,7 @@ $form.Add_Shown({
 $mainPanel = New-Object System.Windows.Forms.Panel
 $script:mainPanel = $mainPanel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 789)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 758)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -1546,12 +1438,13 @@ $websites = @(
     @{Name="Setup Guide By Parasite"; URL="https://x.com/Parasite/status/2033329474922549297"; Desc="Explains How to setup sticks/controller"},
     @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
+    @{Name="Update Script"; URL="UPDATE"; Desc="Download and install the latest version automatically"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
 )
 
 $tileWidth = 790
-$tileHeight = 65
-$spacing = 10
+$tileHeight = 60
+$spacing = 4
 $startX = 30
 $startY = 90
 
@@ -1630,6 +1523,71 @@ foreach ($site in $websites) {
             return
         }
         
+        if ($targetUrl -eq "UPDATE") {
+            # Capture variables locally before running
+            $releasesApi = $script:ReleasesApi
+            $installPath = $script:InstallPath
+            try {
+                $wc = New-Object System.Net.WebClient
+                $wc.Headers.Add("User-Agent", "MARIUS-Updater")
+
+                $json        = $wc.DownloadString($releasesApi)
+                $tagLine     = (($json -split '"tag_name"\s*:\s*"')[1] -split '"')[0].TrimStart('vV')
+                $assetBlock  = ($json -split '"browser_download_url"\s*:\s*"')[1]
+                $downloadUrl = ($assetBlock -split '"')[0]
+
+                if (-not $downloadUrl -or $downloadUrl -notlike "*.ps1") {
+                    Write-UpdateLog "UPDATE TILE - No .ps1 asset in release v$tagLine - falling back to main branch"
+                    $downloadUrl = $script:ScriptUrl
+
+                    try {
+                        $mainScript = $wc.DownloadString($script:ScriptUrl)
+                        $mainVerLine = ($mainScript -split "`n" | Where-Object { $_ -match '^\$script:CurrentVersion\s*=' } | Select-Object -First 1)
+                        $tagLine = ($mainVerLine -replace '.*=\s*"([^"]+)".*', '$1').Trim()
+                        Write-UpdateLog "UPDATE TILE - Main branch reports version: $tagLine"
+                    } catch {
+                        Write-UpdateLog "UPDATE TILE - Could not read version from main branch - skipping"
+                        return
+                    }
+                }
+
+                Write-UpdateLog "UPDATE TILE - Forcing install of v$tagLine from $downloadUrl"
+
+                $tempFile = "$env:TEMP\MARIUS_update_$tagLine.ps1"
+                $wc.DownloadFile($downloadUrl, $tempFile)
+
+                if (-not (Test-Path $tempFile)) {
+                    Write-UpdateLog "UPDATE TILE - FAILED temp file missing"
+                    return
+                }
+                $dlSize = (Get-Item $tempFile).Length
+                if ($dlSize -lt 10000) {
+                    Write-UpdateLog "UPDATE TILE - FAILED file too small ($dlSize bytes)"
+                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                    return
+                }
+
+                Remove-Item -Path $installPath -Force -ErrorAction SilentlyContinue
+                Copy-Item   -Path $tempFile -Destination $installPath -Force
+                Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+
+                if (-not (Test-Path $installPath)) {
+                    Write-UpdateLog "UPDATE TILE - FAILED new file not at install path"
+                    return
+                }
+                $instSize = (Get-Item $installPath).Length
+                Write-UpdateLog "UPDATE TILE - SUCCESS v$tagLine installed ($instSize bytes) - relaunching"
+
+                $args = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$installPath`""
+                [System.Diagnostics.Process]::Start("cmd.exe", "/c start powershell.exe $args") | Out-Null
+                Start-Sleep -Milliseconds 3000
+                [System.Diagnostics.Process]::GetCurrentProcess().Kill()
+            } catch {
+                Write-UpdateLog "UPDATE TILE - ERROR $($_.Exception.Message)"
+            }
+            return
+        }
+        
         $defaultBrowser = Get-DefaultBrowser
         $browserPath = Get-BrowserPath $defaultBrowser
         
@@ -1698,9 +1656,19 @@ $script:rgbTimer.Add_Tick({
 $script:rgbTimer.Start()
 
 # Add Credits Label (Red text at bottom)
+$versionLabel = New-Object System.Windows.Forms.Label
+$versionLabel.Location = New-Object System.Drawing.Point(5, 732)
+$versionLabel.Size = New-Object System.Drawing.Size(120, 28)
+$versionLabel.Text = "v$script:CurrentVersion"
+$versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$versionLabel.ForeColor = [System.Drawing.Color]::Red
+$versionLabel.TextAlign = "MiddleLeft"
+$versionLabel.BackColor = [System.Drawing.Color]::Black
+$mainPanel.Controls.Add($versionLabel)
+
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(0, 760)
-$creditsLabel.Size = New-Object System.Drawing.Size(850, 25)
+$creditsLabel.Location = New-Object System.Drawing.Point(125, 732)
+$creditsLabel.Size = New-Object System.Drawing.Size(600, 28)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
