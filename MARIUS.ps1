@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.0
+    Version: 3.1
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.0 Final
+    Script Version 3.1 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -32,7 +32,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.0"
+$script:CurrentVersion = "3.1"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -871,7 +871,7 @@ function Show-UsbAnalyzer {
     $analyzerCredits = New-Object System.Windows.Forms.Label
     $analyzerCredits.Location = New-Object System.Drawing.Point(0, 625)
     $analyzerCredits.Size = New-Object System.Drawing.Size(850, 25)
-    $analyzerCredits.Text = "Created by: @mariusheier | Script by: @test"
+    $analyzerCredits.Text = "Created by: @mariusheier | Script by: @EODBruz"
     $analyzerCredits.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $analyzerCredits.ForeColor = [System.Drawing.Color]::Red
     $analyzerCredits.TextAlign = "MiddleCenter"
