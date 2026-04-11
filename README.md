@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0-yellow)
+![Version](https://img.shields.io/badge/version-3.1-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -23,9 +23,9 @@ Created by [@mariusheier](https://x.com/mariusheier) | Script by [@EODBruz](http
 
 ---
 
-## 🗑️ Uninstall First (Existing Users — Run This Before Reinstalling!)
+## 🗑️ Uninstall First (Existing Users)
 
-> **If you already have MARIUS installed, run the uninstaller FIRST before installing the new version.** This ensures a completely clean install with no leftover files or broken shortcuts.
+> **If you already have MARIUS installed, run the uninstaller FIRST before reinstalling.** This ensures a completely clean install with no leftover files or broken shortcuts.
 
 **Step 1 — Uninstall:**
 
@@ -40,30 +40,29 @@ iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/ma
 ```
 
 **What the uninstaller removes:**
-- ✅ `%APPDATA%\MARIUS` folder (script, icon, update log)
-- ✅ Desktop shortcut
-- ✅ Start Menu shortcut and folder
-- ✅ Any leftover temp update files in `%TEMP%`
+- `%APPDATA%\MARIUS` folder (script, icon, update log)
+- Desktop shortcut
+- Start Menu shortcut and folder
+- Any leftover temp update files in `%TEMP%`
 
 ---
 
 ## 🚀 Quick Install (New Users)
 
-### Method 1: One-Liner (Recommended!)
+### Method 1: One-Liner (Recommended)
 
-Open PowerShell and paste this:
+Open PowerShell and paste:
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-**Done!** No downloads, no security prompts, just runs instantly.
+No downloads, no security prompts — runs instantly and installs itself automatically.
 
 ### Method 2: Manual Download
 
-1. **Download:** [Launch_MARIUS.bat](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/raw/main/Launch_MARIUS.bat)
-2. **Double-click** the file
-3. **Done!**
+1. Download [Launch_MARIUS.bat](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/raw/main/Launch_MARIUS.bat)
+2. Double-click the file
 
 The launcher downloads and runs the latest version automatically.
 
@@ -71,139 +70,149 @@ The launcher downloads and runs the latest version automatically.
 
 ## ✨ Features
 
-### 🎮 **MARIUS Board Configurator**
-- **Firmware Updater** - Update your controller to the latest versions
-- **Setup Controller** - Calibrate and configure controller settings
-- **Polling Rate Checker** - Test and verify your controller's polling rate
-- **USB Latency Analyzer** - Analyze USB chip latency (Built-in!)
-- **Joystick Tester** - Test your joystick inputs, buttons, and analog stick precision
-- **GameBar Noti Removed** - Removes GameBar annoying message with 8K Polling Rates Affected Controllers
-- **Creator Twitter** - Follow [@mariusheier](https://x.com/mariusheier) for updates
+### 🎮 Main Menu
 
-### 🔄 **Auto-Updater**
-- Automatically checks for updates on every launch
-- Shows a prompt when a new version is available — **Update Now** or **Skip**
-- Downloads and relaunches the new version instantly
-- No manual re-downloading ever needed
-- **BUILD system** — supports full resets and forced updates across all users
-- Wipes and reinstalls cleanly on major updates — no leftover files
+The app launches a dark-themed GUI with RGB border animation. Each menu tile shows a name and description. The full list of options:
 
-### 🖥️ **Auto Desktop Shortcut**
-- On first run, automatically installs to `%APPDATA%\MARIUS\MARIUS.ps1`
-- Creates a Desktop shortcut with the **MBC yellow icon** automatically
-- Shortcut launches silently — no PowerShell window, no security warnings
-- One-time setup, works forever
+| Tile | Action |
+|------|--------|
+| **Setup Controller** | Opens [devsetup.mariusheier.com](https://devsetup.mariusheier.com/) — calibrate and configure controller settings and polling rate |
+| **Joystick Tester** | Opens [hardwaretester.com/gamepad](https://hardwaretester.com/gamepad) — test inputs, buttons, and analog stick precision |
+| **Polling Rate Checker** | Opens the polling rate checker at tools.mariusheier.com |
+| **USB Latency Analyzer** | Runs the built-in USB chip counter (no browser needed) |
+| **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
+| **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
+| **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
+| **Update Script** | Manually triggers a download and install of the latest version |
+| **Exit** | Closes the application |
 
-### 📊 **USB Latency Analyzer V3**
-- 🟢 **0 CHIPS** - Direct to CPU (BEST - Lowest Latency)
-- 🟠 **1 CHIP** - Through Chipset (GOOD - Normal Latency)
-- 🔴 **2+ CHIPS** - Through USB Hub (AVOID - Highest Latency)
+All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
 
-### 🌐 **Browser Support**
-Supports all major Chromium-based browsers:
-- ✅ Microsoft Edge
-- ✅ Google Chrome
-- ✅ Brave
-- ✅ Opera
-- ✅ Vivaldi
-- ✅ Arc
+### 🔄 Auto-Updater
+
+The updater runs silently every time the app launches. It queries the **GitHub Releases API** for the latest release tag, compares it to the currently installed version, and — if a newer version is available — downloads it, validates the file size (must be >10 KB), swaps the old script out, and relaunches automatically. All update activity is logged to `%APPDATA%\MARIUS\update.log`.
+
+If no `.ps1` asset is attached to the GitHub release, the updater falls back to downloading from the `main` branch and reads the version number directly from the script source.
+
+### 🖥️ Auto Install & Shortcuts
+
+On first run the script:
+1. Copies itself to `%APPDATA%\MARIUS\MARIUS.ps1`
+2. Extracts the embedded MBC icon (`MBC.ico`) to the same folder
+3. Creates a **Desktop shortcut** — launches silently with no PowerShell window
+4. Creates a **Start Menu shortcut** under Programs
+
+Shortcuts are only created once and are not recreated on subsequent runs unless missing.
+
+### 📊 USB Latency Analyzer V3
+
+The built-in analyzer walks the Windows PnP device tree to count how many USB controller chips sit between each connected input device and the CPU.
+
+**Chip count ratings:**
+
+```
+🟢  0 CHIPS — Direct to CPU        (BEST — lowest latency)
+🟠  1 CHIP  — Through chipset      (GOOD — normal latency)
+🔴  2+ CHIPS — Through USB hub     (AVOID — highest latency)
+```
+
+Click **SCAN USB DEVICES** to scan. Results are colour-coded. The analyzer window is borderless and draggable.
+
+---
+
+## 🔌 Supported Hardware (USB Analyzer)
+
+The analyzer contains an embedded database of known USB controller IDs. Recognized hardware includes:
+
+**Intel CPU-integrated** — Ice Lake (10th Gen) through Lunar Lake, with Thunderbolt 3/4/5 (Alpine Ridge through Barlow Ridge)
+
+**Intel PCH/Chipset** — 100 Series through 800 Series, including Alder Lake, Raptor Lake, and Meteor Lake variants
+
+**AMD CPU-integrated** — Ryzen 1000 (Zen) through Ryzen 9000/Strix Halo (Zen 5), Ryzen 6000/7040 mobile, Steam Deck (VanGogh)
+
+**AMD Chipset** — X370/X399 through X870/B850 (AM5), X570/B550/A520/X470/B450 (AM4)
+
+**Third-party controllers** — ASMedia ASM1042/1042A/1142/3242, VIA VL805/806, Renesas uPD720201/202
+
+Unknown Intel or AMD controllers fall back to a generic chipset classification (1 chip).
+
+---
+
+## 🌐 Browser Support
+
+Browser tiles open in app mode (no address bar) using the first detected Chromium browser in this order:
+
+Your default browser → Chrome → Edge → Brave → Opera → Vivaldi → Arc
+
+If no Chromium browser is found, Windows' default URL handler is used instead.
 
 ---
 
 ## 📋 Requirements
 
-- **Windows 10** or **Windows 11** (PowerShell 5.1+ included)
-- **Windows 8/8.1/7** require PowerShell 5.1 upgrade
+- Windows 10 or Windows 11 (PowerShell 5.1 is included by default)
+- Windows 8/8.1/7 require a manual PowerShell 5.1 upgrade
 - No administrator rights required
-- No installation needed
+- No additional software needed
 
 ---
 
 ## 📥 All Installation Methods
 
-### Method 1: One-Liner (Fastest!)
-
-Paste this into PowerShell:
+### Method 1: One-Liner
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
 
-**Benefits:**
-- ✅ No files to download
-- ✅ No security warnings
-- ✅ Runs immediately
-- ✅ Always gets latest version
-- ✅ Auto-installs to `%APPDATA%\MARIUS` and creates Desktop shortcut
+No files to download, no security warnings, always gets the latest version, auto-installs to `%APPDATA%\MARIUS` and creates Desktop and Start Menu shortcuts.
 
-### Method 2: BAT Launcher (Double-Click!)
+### Method 2: BAT Launcher
 
 1. Download `Launch_MARIUS.bat` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
-2. Double-click `Launch_MARIUS.bat`
-3. Done!
+2. Double-click it
 
-**What it does:**
-- Downloads and runs the latest version automatically
-- Shows status in console window
-- No PowerShell commands needed
+Downloads and runs the latest version automatically. No PowerShell commands needed.
 
-### Method 3: Desktop Shortcut (Best for Repeat Use!)
+### Method 3: Desktop Shortcut
 
-The Desktop shortcut is now **created automatically** on first run — no extra steps needed!
-
-- ✅ Created on first launch automatically
-- ✅ Yellow MBC icon on your Desktop
-- ✅ Launches silently with no PowerShell window
-- ✅ Always points to the installed version at `%APPDATA%\MARIUS\MARIUS.ps1`
+Created automatically on first run. The shortcut launches the installed script at `%APPDATA%\MARIUS\MARIUS.ps1` silently with no PowerShell window.
 
 ### Method 4: Direct Script Download
 
 1. Download `MARIUS.ps1` from [GitHub](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR)
 2. Right-click → **Run with PowerShell**
-3. When you see: `[D] Do not run  [R] Run once...`
-4. Press **R** and Enter
+3. When prompted press **R** then Enter to run once
 
 ---
 
 ## 🔄 Updating
 
-Updating is fully automatic. When a new version is released:
-
-1. Launch the app as normal
-2. A prompt will appear: **"Update Available! vX.X → vX.X"**
-3. Press **Update Now**
-4. The app **wipes the old installation completely**, downloads fresh, and relaunches itself instantly
-
-You never need to manually download a new version again.
+Updates are fully automatic. The app checks the GitHub Releases API on every launch. If a new version is found you can also trigger a manual update at any time from the **Update Script** tile in the menu — it downloads the latest release, validates it, swaps it in, and relaunches.
 
 ---
 
 ## ⚠️ Known Updater Issues & History
 
-### Why you may need to run the one-liner once
+### Issue 1 — GitHub CDN Caching
+Early versions downloaded updates without a cache-busting parameter, so GitHub could serve a stale cached file. Users clicked **Update Now** but received the same old script. **Fixed in BUILD1.**
 
-The auto-updater has gone through several fixes since early versions. If you installed the app a while ago, your copy may be missing one or more of these fixes:
+### Issue 2 — Version numbers with letters
+Version strings like `3.1Beta` caused PowerShell's `[version]` cast to fail silently, so the update check never triggered. Version numbers must be numeric only (e.g. `3.0`, `3.1`). **Always use numbers only.**
 
-**Issue 1 — GitHub CDN Caching**
-Early versions downloaded updates without a cache-busting parameter, meaning GitHub could serve a stale cached file instead of the latest version. Users would click **Update Now** but get the same old script back. **Fixed in BUILD1.**
+### Issue 3 — Downgrading not possible
+The old updater only triggered when the remote version was *higher* than local. Rolling back from `10.0` to `3.0` would never prompt. **Fixed with the BUILD system in BUILD1.**
 
-**Issue 2 — Version comparison with letters**
-Version numbers containing letters (e.g. `3.1Beta`) caused PowerShell's `[version]` cast to fail silently, so the update check never triggered. **Always use numbers only** e.g. `1.0`, `1.1`.
+### Issue 4 — Stale shortcuts after update
+Shortcuts pointed to the old script path and kept launching the cached version after an update. **Fixed in BUILD1** — shortcuts are now deleted and recreated on every update.
 
-**Issue 3 — Downgrading not possible**
-The updater only triggered when `version.txt` was *higher* than the local version. Going from `10.0` back to `3.0` would never prompt because `3.0 < 10.0`. **Fixed with the BUILD system in BUILD1.**
+### Issue 5 — Old installs missing all fixes
+Users who installed before BUILD1 had none of the above fixes and no way to receive them automatically. **Solution: run the one-liner once** to get the fully patched version.
 
-**Issue 4 — Stale shortcuts after update**
-Old shortcuts pointed to the previous script path. After an update the shortcut still launched the old cached version. **Fixed in BUILD1** — shortcuts are now deleted and recreated on every update.
+### If your updater seems broken
 
-**Issue 5 — Old installs missing all fixes**
-Users who installed before BUILD1 had none of the above fixes. There was no way to push a remote fix to them since the old script couldn't understand FORCE or BUILD tags. **Solution: run the one-liner once** to get the fully patched version.
-
----
-
-### 🔁 If your updater seems broken or stuck
-
-Run the uninstaller first, then reinstall cleanly:
+Run the uninstaller, then reinstall:
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
@@ -212,150 +221,60 @@ iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/ma
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
 ```
-
-This completely replaces your old installation. You only need to do this once — after that all future updates are fully automatic forever.
 
 ---
 
 ## 🎯 Usage
 
 ### Main Menu
-1. Run the script (using any method above)
-2. Choose from the menu:
-   - **Firmware Updater** - Opens in browser
-   - **Setup Controller** - Opens in browser
-   - **Polling Rate Checker** - Opens in browser
-   - **USB Latency Analyzer** - Opens built-in analyzer
-   - **Joystick Tester** - Opens joystick testing tool
-   - **GameBar Notification Removal** - Disables GameBar popups
-   - **Creator Twitter** - Opens [@mariusheier](https://x.com/mariusheier)
-   - **Exit** - Close application
+
+Launch the app using any method above. The GUI opens with a dark background and animated RGB border. Click any tile to use that feature. Press **Escape** to exit.
 
 ### USB Latency Analyzer
-1. Click **"USB Latency Analyzer"** from main menu
-2. Click **"SCAN USB DEVICES"**
-3. View results color-coded by latency:
-   - 🟢 Green = 0 chips (Direct to CPU - Best!)
-   - 🟠 Orange = 1 chip (Through chipset - Good)
-   - 🔴 Red = 2+ chips (Through hub - Avoid for gaming)
+
+1. Click **USB Latency Analyzer** from the main menu
+2. Click **SCAN USB DEVICES**
+3. Results appear colour-coded by chip count — green for direct CPU connection, orange for chipset, red for hub
+
+### GameBar Notification Removal
+
+Click **GameBar Notification Removal** to suppress the Windows GameBar popup that appears with high polling rate controllers. No restart required.
+
+### Manual Update
+
+Click **Update Script** to force an immediate check and install of the latest version from GitHub. The app will relaunch automatically if a new version is installed.
 
 ---
 
 ## 📊 Understanding USB Latency
 
-### What Does "Chip Count" Mean?
-
-Each "chip" represents a hop in the USB chain:
+Each "chip" is a hop in the USB chain between your device and the CPU:
 
 ```
-0 CHIPS: Device → [CPU] ✅
-         Lowest latency - Perfect for competitive gaming
-
-1 CHIP:  Device → [CHIPSET] → [CPU] ⚠️
-         Normal latency - Fine for most uses
-
-2+ CHIPS: Device → [USB HUB] → [CHIPSET] → [CPU] ❌
-          Highest latency - Avoid for gaming peripherals
+0 CHIPS:  Device → [CPU]                        ✅ Lowest latency
+1 CHIP:   Device → [CHIPSET] → [CPU]            ⚠️  Normal latency
+2+ CHIPS: Device → [HUB] → [CHIPSET] → [CPU]   ❌ Highest latency
 ```
 
 ### Example Results
 
 ```
-● 0 CHIPS - DIRECT TO CPU (1 device)
+● 0 CHIPS — DIRECT TO CPU (1 device)
    └─ Wireless Controller
       Raphael/Granite Ridge USB 3.1 | Ryzen 7000/9000 (AM5)
 
-● 1 CHIP - THROUGH CHIPSET (4 devices)
+● 1 CHIP — THROUGH CHIPSET (4 devices)
    └─ G300s Optical Gaming Mouse
       600 Series USB 3.2 | X670/B650 (AM5)
 
-● 2+ CHIPS - THROUGH HUB (1 device)
+● 2+ CHIPS — THROUGH HUB (1 device)
    └─ SteelSeries Keyboard
       2 chips | 1 hub(s)
 ```
 
 ### Optimization Tips
 
-🎯 **For competitive gaming:**
-- Move mouse/keyboard to **0 CHIP ports** (if available)
-- Avoid USB hubs for gaming peripherals
-- Use rear I/O ports (usually better than front panel)
-
-📍 **Finding the best ports:**
-- Check your motherboard manual for "CPU-connected" USB ports
-- Try different rear panel USB ports and rescan
-- USB 3.0/3.1/3.2 ports often have better paths
-
----
-
-## 🖥️ Supported Hardware
-
-### Intel Platforms
-- 14th Gen (Meteor Lake, Lunar Lake)
-- 13th Gen (Raptor Lake)
-- 12th Gen (Alder Lake)
-- 11th Gen (Tiger Lake)
-- 10th Gen and older
-
-### AMD Platforms
-- Ryzen 9000 Series (Zen 5)
-- Ryzen 7000 Series (Zen 4)
-- Ryzen 5000/4000/3000 Series
-- Ryzen 2000/1000 Series
-
-### Third-Party Controllers
-- ASMedia, VIA, Renesas
-- Intel Thunderbolt 3/4/5
-
----
-
-## 🙏 Credits
-
-- **App Creator:** [@mariusheier](https://x.com/mariusheier)
-- **Script Developer:** [@EODBruz](https://github.com/EODBruz)
-- **Special Thanks:** FR33THY Allow Scripts! Bat File
-
----
-
-## ❓ FAQ
-
-### "Security warning - Do you want to run this script?"
-
-This is normal for downloaded PowerShell scripts. Just press **"R"** to run once.
-
-**Want to avoid this?** Use Method 1 (One-liner) or Method 2 (BAT launcher) instead - no warnings!
-
-### "Is this script safe?"
-
-Yes! The script is:
-- ✅ **Open source** - You can read all the code on GitHub
-- ✅ **No admin required** - Only reads USB info
-- ✅ **No system changes** - Only creates a Desktop shortcut and installs to `%APPDATA%\MARIUS`
-- ✅ **Community trusted** - Made for [@mariusheier](https://x.com/mariusheier)'s MARIUS community
-
-### "Which method should I use?"
-
-**Most users:** Method 1 (One-liner) - easiest and fastest!
-**Want double-click:** Method 2 (BAT launcher)
-**After first run:** Use the Desktop shortcut that was automatically created!
-
-### "The BAT file won't run!"
-
-Make sure you downloaded `Launch_MARIUS.bat` (not `Launch_MARIUS_bat.bat` or similar). The file should start with `@echo off`.
-
-### "Where is the script installed?"
-
-After first run, the script lives at `%APPDATA%\MARIUS\MARIUS.ps1`. The Desktop shortcut points here automatically.
-
-### "How do I completely uninstall?"
-
-Run the uninstaller one-liner:
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
-```
-
-This removes all files, shortcuts, and folders. Nothing is left behind.
+For competitive gaming, move your mouse and keyboard to 0-chip ports where possible. Avoid USB hubs for gaming peripherals. Rear I/O ports are usually better than front panel ports — check your motherboard manual for "CPU-connected" USB ports. Try different rear panel ports and rescan to compare.
 
 ---
 
@@ -363,74 +282,86 @@ This removes all files, shortcuts, and folders. Nothing is left behind.
 
 ### Execution Policy Error
 
-If you get an execution policy error when running the .ps1 file directly:
-
-**Quick Fix:** Use Method 1 (one-liner) or Method 2 (BAT launcher) instead - they bypass this automatically!
+Use Method 1 (one-liner) or Method 2 (BAT launcher) — they bypass execution policy automatically. If you must run the `.ps1` directly, press **R** at the security prompt.
 
 ### Script Won't Run
 
 Check your PowerShell version:
+
 ```powershell
 $PSVersionTable.PSVersion
 ```
 
-Must be **5.1 or higher**. Windows 10/11 include this by default.
+Must be 5.1 or higher. Windows 10 and 11 include this by default.
 
 ### USB Analyzer Shows No Devices
 
-- Make sure devices are **plugged in and working**
-- Script only detects **input devices** (mouse, keyboard, controllers)
-- Try running as administrator if issues persist
+Make sure devices are plugged in and working. The analyzer only detects input devices (mice, keyboards, controllers). Try running as administrator if devices are still missing.
 
 ### Browser Doesn't Open
 
-The script will try browsers in this order:
-1. Your default browser
-2. Chrome → Edge → Brave → Opera → Vivaldi → Arc
-
-If none are found, it will use Windows default handler.
+The script searches for Chromium browsers in the order listed under Browser Support. If none are found it falls back to the Windows default URL handler. Install any Chromium browser if you want app-mode windows.
 
 ### Update Not Appearing
 
-- Make sure you have an internet connection
-- Check that `version.txt` on GitHub has been updated to the latest version number
-- If the app was just updated, the update check is skipped on the first launch to prevent loops
-- If you are on an old install (before BUILD1), the updater may be broken — run the uninstaller then reinstall using the one-liners above
-- **Never use letters in version numbers** (e.g. `3.1Beta` will break the version check) — use numbers only like `3.0`, `3.1`
+Check your internet connection. The updater queries the GitHub Releases API — if no `.ps1` asset is attached to the release it falls back to reading the version from the `main` branch directly. If you are on a pre-BUILD1 install the updater itself may be broken; run the uninstaller and reinstall cleanly using the one-liners above. Never use letters in version numbers.
 
 ---
 
 ## 📞 Support
 
 - **Issues:** [GitHub Issues](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
-- **Creator:** [@mariusheier on Twitter/X](https://x.com/mariusheier)
+- **Creator:** [@mariusheier on X](https://x.com/mariusheier)
 - **Developer:** [@EODBruz on GitHub](https://github.com/EODBruz)
 
 ---
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` - Main script (auto-installs, auto-updates, creates Desktop shortcut)
-- `MARIUS_Uninstall.ps1` - Uninstaller (removes all files, shortcuts, and folders)
-- `Launch_MARIUS.bat` - Double-click launcher (easiest!)
-- `version.txt` - Current version number (used by auto-updater)
-- `README.md` - This documentation
-- `logo.png` - MARIUS logo
-- `Title.png` - Title banner used in the app
+- `MARIUS.ps1` — Main script (v3.1). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
+- `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
+- `README.md` — This file
+- `logo.png` — MARIUS logo
+- `Title.png` — Title banner displayed inside the app
 
 ---
 
-## 🎮 Made for Gamers
+## ❓ FAQ
 
-**Optimize your USB ports. Minimize your latency. Maximize your performance.**
+**"Security warning — Do you want to run this script?"**
+Normal for downloaded PowerShell scripts. Press **R** to run once. Use the one-liner or BAT launcher to avoid this entirely.
 
-Built with ❤️ for the competitive gaming community.
+**"Is this safe?"**
+Yes. The script is open source — read every line on GitHub. It requires no admin rights, makes no system changes beyond creating a shortcut and copying itself to `%APPDATA%\MARIUS`, and only reads USB device information from the Windows PnP device tree.
+
+**"Where is the script installed?"**
+`%APPDATA%\MARIUS\MARIUS.ps1`. The Desktop and Start Menu shortcuts point here.
+
+**"How do I completely uninstall?"**
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
+```
+
+Nothing is left behind.
+
+**"My device isn't recognised by the USB analyzer."**
+The database covers all major Intel, AMD, and common third-party USB controllers. Unrecognised Intel or AMD controllers are classified as chipset (1 chip) by default. Open a GitHub issue with your controller's Vendor ID and Device ID if you'd like it added.
+
+---
+
+## 🙏 Credits
+
+- **App Creator:** [@mariusheier](https://x.com/mariusheier)
+- **Script Developer:** [@EODBruz](https://github.com/EODBruz)
+- **Special Thanks:** FR33THY — Allow Scripts! Bat File
 
 ---
 
 <div align="center">
 
-**Made for gamers who care about latency.** 🎮⚡
+**Optimize your USB ports. Minimize your latency. Maximize your performance.** 🎮⚡
 
 [⭐ Star this repo](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) | [🐛 Report Bug](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [✨ Request Feature](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
 
