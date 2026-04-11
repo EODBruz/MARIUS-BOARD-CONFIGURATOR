@@ -193,36 +193,6 @@ Updates are fully automatic. The app checks the GitHub Releases API on every lau
 
 ---
 
-## ⚠️ Known Updater Issues & History
-
-### Issue 1 — GitHub CDN Caching
-Early versions downloaded updates without a cache-busting parameter, so GitHub could serve a stale cached file. Users clicked **Update Now** but received the same old script. **Fixed in BUILD1.**
-
-### Issue 2 — Version numbers with letters
-Version strings like `3.1Beta` caused PowerShell's `[version]` cast to fail silently, so the update check never triggered. Version numbers must be numeric only (e.g. `3.0`, `3.1`). **Always use numbers only.**
-
-### Issue 3 — Downgrading not possible
-The old updater only triggered when the remote version was *higher* than local. Rolling back from `10.0` to `3.0` would never prompt. **Fixed with the BUILD system in BUILD1.**
-
-### Issue 4 — Stale shortcuts after update
-Shortcuts pointed to the old script path and kept launching the cached version after an update. **Fixed in BUILD1** — shortcuts are now deleted and recreated on every update.
-
-### Issue 5 — Old installs missing all fixes
-Users who installed before BUILD1 had none of the above fixes and no way to receive them automatically. **Solution: run the one-liner once** to get the fully patched version.
-
-### If your updater seems broken
-
-Run the uninstaller, then reinstall:
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
-```
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
-```
-
----
 
 ## 🎯 Usage
 
@@ -355,7 +325,7 @@ The database covers all major Intel, AMD, and common third-party USB controllers
 
 - **App Creator:** [@mariusheier](https://x.com/mariusheier)
 - **Script Developer:** [@EODBruz](https://github.com/EODBruz)
-- **Special Thanks:** FR33THY — Allow Scripts! Bat File
+- **Special Thanks:** [FR33THY](https://github.com/FR33THYFR33THY/Ultimate) — Files from Ultimate Guide
 
 ---
 
