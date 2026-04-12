@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.1
+    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.2
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including the built-in USB Latency Analyzer.
@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.1
+    Version: 3.2
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.1 Final
+    Script Version 3.2 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -32,7 +32,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.1"
+$script:CurrentVersion = "3.2"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -1329,7 +1329,7 @@ $script:form = New-Object System.Windows.Forms.Form
 $form = $script:form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 762
+$form.Height = 830
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -1356,7 +1356,7 @@ $form.Add_Shown({
 $mainPanel = New-Object System.Windows.Forms.Panel
 $script:mainPanel = $mainPanel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 758)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 826)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -1437,6 +1437,7 @@ $websites = @(
     @{Name="Firmware Updater"; URL="https://update.mariusheier.com/"; Desc="Update Your Controller to Latest Versions Or Beta Versions"},
     @{Name="Setup Guide By Parasite"; URL="https://x.com/Parasite/status/2033329474922549297"; Desc="Explains How to setup sticks/controller"},
     @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+    @{Name="Beta Portal"; URL="https://beta.mariusheier.com/"; Desc="Enroll your board in the beta program and receive early firmware updates"},
     @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
     @{Name="Update Script"; URL="UPDATE"; Desc="Download and install the latest version automatically"},
     @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
@@ -1657,7 +1658,7 @@ $script:rgbTimer.Start()
 
 # Add Credits Label (Red text at bottom)
 $versionLabel = New-Object System.Windows.Forms.Label
-$versionLabel.Location = New-Object System.Drawing.Point(5, 732)
+$versionLabel.Location = New-Object System.Drawing.Point(5, 800)
 $versionLabel.Size = New-Object System.Drawing.Size(120, 28)
 $versionLabel.Text = "v$script:CurrentVersion"
 $versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -1667,7 +1668,7 @@ $versionLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($versionLabel)
 
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(125, 732)
+$creditsLabel.Location = New-Object System.Drawing.Point(125, 800)
 $creditsLabel.Size = New-Object System.Drawing.Size(600, 28)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
