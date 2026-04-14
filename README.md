@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.1-yellow)
+![Version](https://img.shields.io/badge/version-3.3-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -79,13 +79,22 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Setup Controller** | Opens [devsetup.mariusheier.com](https://devsetup.mariusheier.com/) — calibrate and configure controller settings and polling rate |
 | **Joystick Tester** | Opens [hardwaretester.com/gamepad](https://hardwaretester.com/gamepad) — test inputs, buttons, and analog stick precision |
 | **Polling Rate Checker** | Opens the polling rate checker at tools.mariusheier.com |
-| **USB Latency Analyzer** | Runs the built-in USB chip counter (no browser needed) |
 | **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
 | **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
-| **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
 | **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
 | **Update Script** | Manually triggers a download and install of the latest version |
+| **Marius Toolbox** | Opens the Toolbox submenu (USB Latency Analyzer, GameBar Removal, FR33THY Guide) |
 | **Exit** | Closes the application |
+
+### 🧰 Marius Toolbox Submenu
+
+| Tile | Action |
+|------|--------|
+| **USB Latency Analyzer** | Runs the built-in USB chip counter (no browser needed) |
+| **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
+| **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
 
@@ -288,7 +297,7 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.1). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.3). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -318,6 +327,22 @@ Nothing is left behind.
 
 **"My device isn't recognised by the USB analyzer."**
 The database covers all major Intel, AMD, and common third-party USB controllers. Unrecognised Intel or AMD controllers are classified as chipset (1 chip) by default. Open a GitHub issue with your controller's Vendor ID and Device ID if you'd like it added.
+
+---
+
+## 📋 Changelog
+
+### v3.3
+- Added **FR33THY Ultimate Optimization Guide** tile to Marius Toolbox — opens in app mode (no browser chrome)
+- Fixed **RGB border animation** not cycling in the Marius Toolbox window
+- Resized Marius Toolbox window to be more compact
+
+### v3.2
+- Added **Marius Toolbox** submenu (USB Latency Analyzer + GameBar Removal in one place)
+- Improved auto-updater fallback logic for releases without `.ps1` assets
+
+### v3.1
+- Initial public release with USB Latency Analyzer V3, auto-updater, and embedded MBC icon
 
 ---
 
