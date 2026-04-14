@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.2
+    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.3
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including the built-in USB Latency Analyzer.
@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.2
+    Version: 3.3
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.2 Final
+    Script Version 3.3 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -32,7 +32,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.2"
+$script:CurrentVersion = "3.3"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -1329,7 +1329,7 @@ $script:form = New-Object System.Windows.Forms.Form
 $form = $script:form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 830
+$form.Height = 770
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -1356,7 +1356,7 @@ $form.Add_Shown({
 $mainPanel = New-Object System.Windows.Forms.Panel
 $script:mainPanel = $mainPanel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 826)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 766)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -1429,18 +1429,115 @@ $titlePicBox.Add_MouseUp({
 $headerPanel.Controls.Add($titlePicBox)
 $mainPanel.Controls.Add($headerPanel)
 
+# ============================================================================
+# PAGE NAVIGATION HELPERS — swap tiles in-place on the MAIN window
+# ============================================================================
+
+# Collect main-menu tile buttons after they are built (populated below)
+$script:mainTiles    = [System.Collections.Generic.List[System.Windows.Forms.Control]]::new()
+$script:toolboxTiles = [System.Collections.Generic.List[System.Windows.Forms.Control]]::new()
+
+function Show-ToolboxPage {
+    # Hide every main-menu tile
+    foreach ($c in $script:mainTiles) { $c.Visible = $false }
+
+    # Build toolbox tiles only once; reuse on subsequent visits
+    if ($script:toolboxTiles.Count -eq 0) {
+        $tbItems = @(
+            @{Name="USB Latency Analyzer";                URL="USB_ANALYZER";   Desc="Count chips between your device and CPU. More chips = more latency"},
+            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";    Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";  Desc="Optimise and Debloat Windows"},
+            @{Name="Back";                                URL="BACK";           Desc="Return to main menu"}
+        )
+        $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
+        foreach ($tbItem in $tbItems) {
+            $tbTile = New-Object System.Windows.Forms.Button
+            $tbTile.Location  = New-Object System.Drawing.Point($tbSX, ($tbSY + $tbIdx*($tbTH+$tbSP)))
+            $tbTile.Size      = New-Object System.Drawing.Size($tbTW,$tbTH)
+            $tbTile.FlatStyle = "Flat"
+            $tbTile.BackColor = [System.Drawing.Color]::FromArgb(15,15,15)
+            $tbTile.ForeColor = [System.Drawing.Color]::White
+            $tbTile.Font      = New-Object System.Drawing.Font("Segoe UI",11)
+            $tbTile.Text      = ""
+            $tbTile.Cursor    = [System.Windows.Forms.Cursors]::Hand
+            $tbTile.FlatAppearance.BorderSize  = 1
+            $tbTile.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+            $tbTile.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30,30,30)
+            $tbTile.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50,50,50)
+            $tbTile.Tag = $tbItem.URL
+            $tbTile.Add_MouseEnter({ $this.BackColor=[System.Drawing.Color]::FromArgb(25,25,25); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::FromArgb(255,255,0); $this.FlatAppearance.BorderSize=2 })
+            $tbTile.Add_MouseLeave({ $this.BackColor=[System.Drawing.Color]::FromArgb(15,15,15); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::Yellow; $this.FlatAppearance.BorderSize=1 })
+            $tbN=$tbItem.Name; $tbD=$tbItem.Desc
+            $tbTile.Add_Paint({
+                param($s,$e); $g=$e.Graphics
+                $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
+                $tf=New-Object System.Drawing.Font("Segoe UI",11,[System.Drawing.FontStyle]::Bold)
+                $df=New-Object System.Drawing.Font("Segoe UI",8)
+                $wb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+                $rb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Red)
+                $g.DrawString($tbN,$tf,$wb,20,12); $g.DrawString($tbD,$df,$rb,20,35)
+                $wb.Dispose();$rb.Dispose();$tf.Dispose();$df.Dispose()
+            }.GetNewClosure())
+            $tbTile.Add_Click({
+                $tu=$this.Tag
+                if ($tu -eq "BACK")          { Show-MainPage; return }
+                if ($tu -eq "USB_ANALYZER")  { Show-UsbAnalyzer; return }
+                if ($tu -eq "GAMEBAR_FIX")   { Invoke-GameBarNotificationFix; return }
+                if ($tu -eq "FR33THY_GUIDE") {
+                    $targetUrl = "https://github.com/FR33THYFR33THY/Ultimate"
+                    $defaultBrowser = Get-DefaultBrowser
+                    $browserPath = Get-BrowserPath $defaultBrowser
+                    if (-not $browserPath) {
+                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                            if ($browser -ne $defaultBrowser) {
+                                $browserPath = Get-BrowserPath $browser
+                                if ($browserPath) { break }
+                            }
+                        }
+                    }
+                    if ($browserPath) {
+                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                        $wW=1200; $wH=800
+                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
+                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
+                    } else { Start-Process $targetUrl }
+                    return
+                }
+            }.GetNewClosure())
+            $script:mainPanel.Controls.Add($tbTile)
+            $script:toolboxTiles.Add($tbTile)
+            $tbIdx++
+        }
+    }
+
+    # Show toolbox tiles
+    foreach ($c in $script:toolboxTiles) { $c.Visible = $true }
+    $script:mainPanel.Refresh()
+}
+
+function Show-MainPage {
+    foreach ($c in $script:toolboxTiles) { $c.Visible = $false }
+    foreach ($c in $script:mainTiles)    { $c.Visible = $true  }
+    $script:mainPanel.Refresh()
+}
+
+# ============================================================================
+# MAIN MENU TILES
+# (Setup Controller, Joystick Tester, Polling Rate Checker, Firmware Updater,
+#  Setup Guide By Parasite, Beta Portal, Creator Twitter, Update Script,
+#  Marius Toolbox, Exit)
+# ============================================================================
 $websites = @(
-    @{Name="Setup Controller"; URL="https://devsetup.mariusheier.com/"; Desc="Calibrate and configure your controller settings and polling rate settings"},
-    @{Name="Joystick Tester"; URL="https://hardwaretester.com/gamepad"; Desc="Test your joystick inputs, buttons, and analog stick precision"},
-    @{Name="Polling Rate Checker"; URL="https://tools.mariusheier.com/poll_checker.html"; Desc="Test and verify your controller's polling rate"},
-    @{Name="USB Latency Analyzer"; URL="USB_ANALYZER"; Desc="Count chips between your device and CPU. More chips = more latency"},
-    @{Name="Firmware Updater"; URL="https://update.mariusheier.com/"; Desc="Update Your Controller to Latest Versions Or Beta Versions"},
-    @{Name="Setup Guide By Parasite"; URL="https://x.com/Parasite/status/2033329474922549297"; Desc="Explains How to setup sticks/controller"},
-    @{Name="Gamebar Notification Removal"; URL="GAMEBAR_FIX"; Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
-    @{Name="Beta Portal"; URL="https://beta.mariusheier.com/"; Desc="Enroll your board in the beta program and receive early firmware updates"},
-    @{Name="Creator Twitter"; URL="https://x.com/mariusheier"; Desc="Follow for updates, tips, and support"},
-    @{Name="Update Script"; URL="UPDATE"; Desc="Download and install the latest version automatically"},
-    @{Name="Exit"; URL="EXIT"; Desc="Close this application"}
+    @{Name="Setup Controller";         URL="https://devsetup.mariusheier.com/";                         Desc="Calibrate and configure your controller settings and polling rate settings"},
+    @{Name="Joystick Tester";          URL="https://hardwaretester.com/gamepad";                         Desc="Test your joystick inputs, buttons, and analog stick precision"},
+    @{Name="Polling Rate Checker";     URL="https://tools.mariusheier.com/poll_checker.html";            Desc="Test and verify your controller's polling rate"},
+    @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
+    @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
+    @{Name="Beta Portal";              URL="https://beta.mariusheier.com/";                              Desc="Enroll your board in the beta program and receive early firmware updates"},
+    @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
+    @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
+    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal"},
+    @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
 )
 
 $tileWidth = 790
@@ -1511,6 +1608,11 @@ foreach ($site in $websites) {
         
         if ($targetUrl -eq "EXIT") {
             $form.Close()
+            return
+        }
+        
+        if ($targetUrl -eq "TOOLBOX") {
+            Show-ToolboxPage
             return
         }
         
@@ -1619,6 +1721,7 @@ foreach ($site in $websites) {
     })
     
     $mainPanel.Controls.Add($tile)
+    $script:mainTiles.Add($tile)
     $index++
 }
 
@@ -1658,7 +1761,7 @@ $script:rgbTimer.Start()
 
 # Add Credits Label (Red text at bottom)
 $versionLabel = New-Object System.Windows.Forms.Label
-$versionLabel.Location = New-Object System.Drawing.Point(5, 800)
+$versionLabel.Location = New-Object System.Drawing.Point(5, 736)
 $versionLabel.Size = New-Object System.Drawing.Size(120, 28)
 $versionLabel.Text = "v$script:CurrentVersion"
 $versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -1668,7 +1771,7 @@ $versionLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($versionLabel)
 
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(125, 800)
+$creditsLabel.Location = New-Object System.Drawing.Point(125, 736)
 $creditsLabel.Size = New-Object System.Drawing.Size(600, 28)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
