@@ -1536,7 +1536,7 @@ $websites = @(
     @{Name="Beta Portal";              URL="https://beta.mariusheier.com/";                              Desc="Enroll your board in the beta program and receive early firmware updates"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
     @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
-    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal"},
+    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal, FR33THY Ultimate Guide"},
     @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
 )
 
