@@ -10,16 +10,51 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.3-yellow)
+![Version](https://img.shields.io/badge/version-3.4-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Proprietary-red)
 
 **All-in-one configurator for MARIUS controllers with built-in USB Latency Analyzer**
 
-Created by [@mariusheier](https://x.com/mariusheier) | Script by [@EODBruz](https://github.com/EODBruz)
+Official Application by [@EODBruz](https://github.com/EODBruz)
 
 </div>
+
+---
+
+## ⚖️ License Agreement
+
+**Copyright (c) 2026 @EODBruz. All rights reserved.**
+
+This is an official application developed and maintained by @EODBruz. By using this software you agree to the following terms:
+
+**1. Grant of License**
+This software is provided free of charge for personal, non-commercial use. You are granted a non-exclusive, non-transferable licence to run this script on any Windows machine you own or control.
+
+**2. Restrictions**
+You may NOT:
+- Redistribute, resell, or sublicence this software or any modified version without prior written permission from @EODBruz
+- Remove or alter any copyright notices or credits contained within the script
+- Claim authorship or ownership of this software or any portion thereof
+- Use this software to develop a competing product without explicit consent
+
+**3. Modifications**
+You may modify this script for personal use only. Any publicly distributed fork or derivative must clearly credit @EODBruz and must not be presented as an official release.
+
+**4. Official Status**
+Only versions distributed via the official repository at [github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) are considered official. @EODBruz accepts no responsibility for modified or unofficial copies.
+
+**5. No Warranty**
+This software is provided "AS IS" without warranty of any kind. @EODBruz shall not be liable for any damages arising from the use or inability to use this software.
+
+**6. Termination**
+This licence is effective until terminated. Your rights under this licence will terminate automatically if you fail to comply with any of its terms.
+
+**7. Governing Law**
+This agreement shall be governed by applicable international software licensing standards. Any disputes shall be resolved in good faith between the parties involved.
+
+By continuing to use this software, you confirm that you have read, understood, and accept all terms of this agreement.
 
 ---
 
@@ -81,10 +116,10 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Polling Rate Checker** | Opens the polling rate checker at tools.mariusheier.com |
 | **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
 | **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
-| **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
 | **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
 | **Update Script** | Manually triggers a download and install of the latest version |
-| **Marius Toolbox** | Opens the Toolbox submenu (USB Latency Analyzer, GameBar Removal, FR33THY Guide) |
+| **Marius Toolbox** | Opens the Toolbox submenu (USB Latency Analyzer, GameBar Removal, Beta Portal, FR33THY Guide) |
+| **App Information** | View app details, developer info, and the full license agreement |
 | **Exit** | Closes the application |
 
 ### 🧰 Marius Toolbox Submenu
@@ -93,10 +128,15 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 |------|--------|
 | **USB Latency Analyzer** | Runs the built-in USB chip counter (no browser needed) |
 | **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
 | **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
 | **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
+
+### ℹ️ App Information
+
+Accessible from the main menu. Displays application details including version, developer, platform, and repository. Also contains the full End User License Agreement (EULA). Close with the OK button.
 
 ### 🔄 Auto-Updater
 
@@ -202,7 +242,6 @@ Updates are fully automatic. The app checks the GitHub Releases API on every lau
 
 ---
 
-
 ## 🎯 Usage
 
 ### Main Menu
@@ -211,17 +250,22 @@ Launch the app using any method above. The GUI opens with a dark background and 
 
 ### USB Latency Analyzer
 
-1. Click **USB Latency Analyzer** from the main menu
-2. Click **SCAN USB DEVICES**
-3. Results appear colour-coded by chip count — green for direct CPU connection, orange for chipset, red for hub
+1. Click **Marius Toolbox** from the main menu
+2. Click **USB Latency Analyzer**
+3. Click **SCAN USB DEVICES**
+4. Results appear colour-coded by chip count — green for direct CPU connection, orange for chipset, red for hub
 
 ### GameBar Notification Removal
 
-Click **GameBar Notification Removal** to suppress the Windows GameBar popup that appears with high polling rate controllers. No restart required.
+Click **Marius Toolbox** → **GameBar Notification Removal** to suppress the Windows GameBar popup that appears with high polling rate controllers. No restart required.
 
 ### Manual Update
 
 Click **Update Script** to force an immediate check and install of the latest version from GitHub. The app will relaunch automatically if a new version is installed.
+
+### App Information
+
+Click **App Information** from the main menu to view the application details and full license agreement.
 
 ---
 
@@ -290,14 +334,13 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 ## 📞 Support
 
 - **Issues:** [GitHub Issues](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
-- **Creator:** [@mariusheier on X](https://x.com/mariusheier)
 - **Developer:** [@EODBruz on GitHub](https://github.com/EODBruz)
 
 ---
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.3). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.4). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -328,9 +371,20 @@ Nothing is left behind.
 **"My device isn't recognised by the USB analyzer."**
 The database covers all major Intel, AMD, and common third-party USB controllers. Unrecognised Intel or AMD controllers are classified as chipset (1 chip) by default. Open a GitHub issue with your controller's Vendor ID and Device ID if you'd like it added.
 
+**"Is this an official app?"**
+Yes. This is an official application developed and maintained by @EODBruz. Only versions from the official GitHub repository are considered official. Do not use modified or third-party copies.
+
 ---
 
 ## 📋 Changelog
+
+### v3.4
+- Added **App Information** tile to main menu — displays app details, developer info, and full EULA
+- Moved **Beta Portal** from main menu into the **Marius Toolbox** submenu
+- Added **Beta Portal** tile to Marius Toolbox (above FR33THY Guide)
+- Updated RGB border animation speed across all windows
+- Added full **End User License Agreement** (EULA) embedded in-app
+- Copyright updated — official application by @EODBruz
 
 ### v3.3
 - Added **FR33THY Ultimate Optimization Guide** tile to Marius Toolbox — opens in app mode (no browser chrome)
@@ -348,8 +402,7 @@ The database covers all major Intel, AMD, and common third-party USB controllers
 
 ## 🙏 Credits
 
-- **App Creator:** [@mariusheier](https://x.com/mariusheier)
-- **Script Developer:** [@EODBruz](https://github.com/EODBruz)
+- **Developer:** [@EODBruz](https://github.com/EODBruz)
 - **Special Thanks:** [FR33THY](https://github.com/FR33THYFR33THY/Ultimate) — Files from Ultimate Guide
 
 ---
@@ -359,5 +412,9 @@ The database covers all major Intel, AMD, and common third-party USB controllers
 **Optimize your USB ports. Minimize your latency. Maximize your performance.** 🎮⚡
 
 [⭐ Star this repo](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) | [🐛 Report Bug](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [✨ Request Feature](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
+
+---
+
+*Copyright (c) 2026 @EODBruz. All rights reserved. Unauthorised redistribution or modification is prohibited.*
 
 </div>
