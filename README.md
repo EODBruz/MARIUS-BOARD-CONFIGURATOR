@@ -380,10 +380,6 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 
 ### v3.5
 - General updates and improvements
-
-### v3.4.1
-- Fixed main menu tile order — Update Script now correctly sits above App Information
-
 ### v3.4
 - Added **App Information** tile to main menu — displays app details, developer info, and full EULA
 - Moved **Beta Portal** from main menu into the **Marius Toolbox** submenu
