@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.4-yellow)
+![Version](https://img.shields.io/badge/version-3.5-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -117,8 +117,8 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
 | **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
 | **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
-| **Update Script** | Manually triggers a download and install of the latest version |
 | **Marius Toolbox** | Opens the Toolbox submenu (USB Latency Analyzer, GameBar Removal, Beta Portal, FR33THY Guide) |
+| **Update Script** | Manually triggers a download and install of the latest version |
 | **App Information** | View app details, developer info, and the full license agreement |
 | **Exit** | Closes the application |
 
@@ -340,7 +340,7 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.4). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.5). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -377,6 +377,12 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 ---
 
 ## 📋 Changelog
+
+### v3.5
+- General updates and improvements
+
+### v3.4.1
+- Fixed main menu tile order — Update Script now correctly sits above App Information
 
 ### v3.4
 - Added **App Information** tile to main menu — displays app details, developer info, and full EULA
