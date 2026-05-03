@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.4
+    Version: 3.5
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.4 Final
+    Script Version 3.5 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -32,7 +32,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.4"
+$script:CurrentVersion = "3.5"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -1790,8 +1790,8 @@ $websites = @(
     @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
     @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
-    @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
     @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal, FR33THY Ultimate Guide"},
+    @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
     @{Name="App Information";          URL="APP_INFO";                                                   Desc="View information about this application"},
     @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
 )
