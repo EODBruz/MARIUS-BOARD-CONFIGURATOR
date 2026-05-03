@@ -11,12 +11,12 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.3
+    Version: 3.4
     
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.3 Final
+    Script Version 3.4 Final
     
 .INSTALLATION
     Quick Install (One-Liner):
@@ -32,7 +32,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.3"
+$script:CurrentVersion = "3.4"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -884,7 +884,7 @@ function Show-UsbAnalyzer {
     # RGB BORDER ANIMATION TIMER (USB Analyzer - synced to main window)
     # ============================================================================
     $script:analyzerRgbTimer = New-Object System.Windows.Forms.Timer
-    $script:analyzerRgbTimer.Interval = 20
+    $script:analyzerRgbTimer.Interval = 40
 
     $script:analyzerRgbTimer.Add_Tick({
         # Read the shared hue from the main window timer - no increment here
@@ -970,7 +970,7 @@ function Show-GameBarDialog {
     # ── RGB border timer (synced to main window hue) ──────────────────────────
     $script:gbHue = if ($script:rgbHue) { $script:rgbHue } else { 0 }
     $gbRgbTimer = New-Object System.Windows.Forms.Timer
-    $gbRgbTimer.Interval = 20
+    $gbRgbTimer.Interval = 40
     $gbRgbTimer.Add_Tick({
         $script:gbHue = ($script:gbHue + 2) % 360
         $h = $script:gbHue / 360.0
@@ -1437,6 +1437,240 @@ $mainPanel.Controls.Add($headerPanel)
 $script:mainTiles    = [System.Collections.Generic.List[System.Windows.Forms.Control]]::new()
 $script:toolboxTiles = [System.Collections.Generic.List[System.Windows.Forms.Control]]::new()
 
+function Show-AppInfoDialog {
+    $W = 660; $H = 720
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text            = ""
+    $dlg.Width           = $W
+    $dlg.Height          = $H
+    $dlg.StartPosition   = "CenterScreen"
+    $dlg.FormBorderStyle = "None"
+    $dlg.BackColor       = [System.Drawing.Color]::Yellow
+    $dlg.TopMost         = $true
+
+    $script:aiDrag = $false; $script:aiDX = 0; $script:aiDY = 0
+
+    $inner = New-Object System.Windows.Forms.Panel
+    $inner.Location  = New-Object System.Drawing.Point(3, 3)
+    $inner.Size      = New-Object System.Drawing.Size(($W - 6), ($H - 6))
+    $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $dlg.Controls.Add($inner)
+
+    # ── RGB border timer ─────────────────────────────────────────────────────
+    $aiRgbTimer = New-Object System.Windows.Forms.Timer
+    $aiRgbTimer.Interval = 40
+    $aiRgbTimer.Add_Tick({
+        $script:rgbHue = ($script:rgbHue + 2) % 360
+        $h = $script:rgbHue / 360.0; $i = [Math]::Floor($h * 6); $f = $h * 6 - $i; $q = 1 - $f; $t = $f
+        switch ($i % 6) {
+            0 { $r=255; $g=[int]($t*255); $b=0 }
+            1 { $r=[int]($q*255); $g=255; $b=0 }
+            2 { $r=0; $g=255; $b=[int]($t*255) }
+            3 { $r=0; $g=[int]($q*255); $b=255 }
+            4 { $r=[int]($t*255); $g=0; $b=255 }
+            5 { $r=255; $g=0; $b=[int]($q*255) }
+        }
+        $dlg.BackColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+    })
+    $aiRgbTimer.Start()
+    $dlg.Add_FormClosed({ $aiRgbTimer.Stop(); $aiRgbTimer.Dispose() })
+
+    # ── Title bar ────────────────────────────────────────────────────────────
+    $titleBar = New-Object System.Windows.Forms.Panel
+    $titleBar.Location  = New-Object System.Drawing.Point(0, 0)
+    $titleBar.Size      = New-Object System.Drawing.Size(($W - 6), 70)
+    $titleBar.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $inner.Controls.Add($titleBar)
+    $titleBar.Add_MouseDown({ $script:aiDrag=$true; $script:aiDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:aiDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $titleBar.Add_MouseMove({ if($script:aiDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:aiDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:aiDY } })
+    $titleBar.Add_MouseUp({ $script:aiDrag=$false })
+
+    $picTitle = New-Object System.Windows.Forms.PictureBox
+    $picTitle.Location  = New-Object System.Drawing.Point(0, 0)
+    $picTitle.Size      = New-Object System.Drawing.Size(($W - 50), 70)
+    $picTitle.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $picTitle.Add_Paint({
+        param($sender, $e); $g=$e.Graphics
+        $g.SmoothingMode=[System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+        $sf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $sb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(80,0,0,0))
+        $tf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $tb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $g.DrawString("APP INFORMATION",$sf,$sb,22,17)
+        $g.DrawString("APP INFORMATION",$tf,$tb,20,15)
+        $sf.Dispose();$sb.Dispose();$tf.Dispose();$tb.Dispose()
+    })
+    $picTitle.Add_MouseDown({ $script:aiDrag=$true; $script:aiDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:aiDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $picTitle.Add_MouseMove({ if($script:aiDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:aiDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:aiDY } })
+    $picTitle.Add_MouseUp({ $script:aiDrag=$false })
+    $titleBar.Controls.Add($picTitle)
+
+    # ── Divider ──────────────────────────────────────────────────────────────
+    $div = New-Object System.Windows.Forms.Panel
+    $div.Location  = New-Object System.Drawing.Point(0, 70)
+    $div.Size      = New-Object System.Drawing.Size(($W - 6), 2)
+    $div.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $inner.Controls.Add($div)
+
+    # ── OFFICIAL APP BADGE ───────────────────────────────────────────────────
+    $badgePanel = New-Object System.Windows.Forms.Panel
+    $badgePanel.Location  = New-Object System.Drawing.Point(20, 82)
+    $badgePanel.Size      = New-Object System.Drawing.Size(($W - 46), 36)
+    $badgePanel.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 0)
+    $inner.Controls.Add($badgePanel)
+
+    $badgeLabel = New-Object System.Windows.Forms.Label
+    $badgeLabel.Location  = New-Object System.Drawing.Point(0, 0)
+    $badgeLabel.Size      = New-Object System.Drawing.Size(($W - 46), 36)
+    $badgeLabel.Text      = "  OFFICIAL APPLICATION  |  Developed & Maintained by @EODBruz"
+    $badgeLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $badgeLabel.ForeColor = [System.Drawing.Color]::Yellow
+    $badgeLabel.BackColor = [System.Drawing.Color]::Transparent
+    $badgeLabel.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($badgeLabel)
+
+    # ── App info grid ────────────────────────────────────────────────────────
+    $infoLines = @(
+        @{Text="Application:";   Value="MARIUS Board Configurator"},
+        @{Text="Version:";       Value="v$script:CurrentVersion"},
+        @{Text="Developer:";     Value="@EODBruz"},
+        @{Text="Platform:";      Value="Windows (PowerShell 5.1+)"},
+        @{Text="Repository:";    Value="github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR"}
+    )
+    $yPos = 130
+    foreach ($line in $infoLines) {
+        $lblKey = New-Object System.Windows.Forms.Label
+        $lblKey.Location  = New-Object System.Drawing.Point(30, $yPos)
+        $lblKey.Size      = New-Object System.Drawing.Size(160, 22)
+        $lblKey.Text      = $line.Text
+        $lblKey.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+        $lblKey.ForeColor = [System.Drawing.Color]::Yellow
+        $lblKey.BackColor = [System.Drawing.Color]::Transparent
+        $inner.Controls.Add($lblKey)
+
+        $lblVal = New-Object System.Windows.Forms.Label
+        $lblVal.Location  = New-Object System.Drawing.Point(200, $yPos)
+        $lblVal.Size      = New-Object System.Drawing.Size(($W - 226), 22)
+        $lblVal.Text      = $line.Value
+        $lblVal.Font      = New-Object System.Drawing.Font("Segoe UI", 9)
+        $lblVal.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+        $lblVal.BackColor = [System.Drawing.Color]::Transparent
+        $inner.Controls.Add($lblVal)
+        $yPos += 26
+    }
+
+    # ── Divider before license ───────────────────────────────────────────────
+    $div2 = New-Object System.Windows.Forms.Panel
+    $div2.Location  = New-Object System.Drawing.Point(20, ($yPos + 6))
+    $div2.Size      = New-Object System.Drawing.Size(($W - 46), 1)
+    $div2.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+    $inner.Controls.Add($div2)
+
+    # ── License Agreement header ─────────────────────────────────────────────
+    $licHeader = New-Object System.Windows.Forms.Label
+    $licHeader.Location  = New-Object System.Drawing.Point(30, ($yPos + 14))
+    $licHeader.Size      = New-Object System.Drawing.Size(($W - 60), 22)
+    $licHeader.Text      = "LICENSE AGREEMENT"
+    $licHeader.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $licHeader.ForeColor = [System.Drawing.Color]::Yellow
+    $licHeader.BackColor = [System.Drawing.Color]::Transparent
+    $inner.Controls.Add($licHeader)
+
+    # ── Scrollable license text box ──────────────────────────────────────────
+    $licBoxTop  = $yPos + 40
+    $licBoxH    = $H - $licBoxTop - 100
+    $licBox = New-Object System.Windows.Forms.RichTextBox
+    $licBox.Location   = New-Object System.Drawing.Point(20, $licBoxTop)
+    $licBox.Size       = New-Object System.Drawing.Size(($W - 46), $licBoxH)
+    $licBox.BackColor  = [System.Drawing.Color]::FromArgb(18, 18, 18)
+    $licBox.ForeColor  = [System.Drawing.Color]::FromArgb(190, 190, 190)
+    $licBox.Font       = New-Object System.Drawing.Font("Segoe UI", 8)
+    $licBox.ReadOnly   = $true
+    $licBox.BorderStyle = "None"
+    $licBox.ScrollBars = "Vertical"
+    $licBox.Text = @"
+MARIUS BOARD CONFIGURATOR -- END USER LICENSE AGREEMENT
+=======================================================
+Copyright (c) $((Get-Date).Year) @EODBruz. All rights reserved.
+
+This is an official application developed and maintained by @EODBruz.
+
+By using this software you agree to the following terms:
+
+1. GRANT OF LICENSE
+   This software is provided free of charge for personal, non-commercial use.
+   You are granted a non-exclusive, non-transferable licence to run this script
+   on any Windows machine you own or control.
+
+2. RESTRICTIONS
+   You may NOT:
+   - Redistribute, resell, or sublicence this software or any modified version
+     without prior written permission from @EODBruz.
+   - Remove or alter any copyright notices or credits contained within the script.
+   - Claim authorship or ownership of this software or any portion thereof.
+   - Use this software to develop a competing product without explicit consent.
+
+3. MODIFICATIONS
+   You may modify this script for personal use only. Any publicly distributed
+   fork or derivative must clearly credit @EODBruz and must not be presented
+   as an official release.
+
+4. OFFICIAL STATUS
+   Only versions distributed via the official repository at
+   github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR are considered official.
+   @EODBruz accepts no responsibility for modified or unofficial copies.
+
+5. NO WARRANTY
+   This software is provided "AS IS" without warranty of any kind. @EODBruz
+   shall not be liable for any damages arising from the use or inability to
+   use this software.
+
+6. TERMINATION
+   This licence is effective until terminated. Your rights under this licence
+   will terminate automatically if you fail to comply with any of its terms.
+
+7. GOVERNING LAW
+   This agreement shall be governed by applicable international software
+   licensing standards. Any disputes shall be resolved in good faith between
+   the parties involved.
+
+By continuing to use this software, you confirm that you have read,
+understood, and accept all terms of this agreement.
+"@
+    $inner.Controls.Add($licBox)
+
+    # ── Single OK button centred ─────────────────────────────────────────────
+    $okBtnW = 220; $okBtnH = 46
+    $okX = [int](($W - 6 - $okBtnW - 4) / 2)
+    $okY = $H - 76
+
+    $rgbOkPanel = New-Object System.Windows.Forms.Panel
+    $rgbOkPanel.Location  = New-Object System.Drawing.Point($okX, $okY)
+    $rgbOkPanel.Size      = New-Object System.Drawing.Size(($okBtnW + 4), ($okBtnH + 4))
+    $rgbOkPanel.BackColor = [System.Drawing.Color]::Yellow
+    $inner.Controls.Add($rgbOkPanel)
+    $aiRgbTimer.Add_Tick({ $rgbOkPanel.BackColor = $dlg.BackColor })
+
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Location  = New-Object System.Drawing.Point(2, 2)
+    $btnOk.Size      = New-Object System.Drawing.Size($okBtnW, $okBtnH)
+    $btnOk.Text      = "OK"
+    $btnOk.FlatStyle = "Flat"
+    $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+    $btnOk.ForeColor = [System.Drawing.Color]::Yellow
+    $btnOk.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnOk.FlatAppearance.BorderSize = 0
+    $btnOk.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnOk.Add_Click({ $dlg.Close() })
+    $btnOk.Add_MouseEnter({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(40,40,12) })
+    $btnOk.Add_MouseLeave({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20,20,20) })
+    $rgbOkPanel.Controls.Add($btnOk)
+
+    $dlg.Add_KeyDown({ param($s,$e); if($e.KeyCode -eq "Escape"){ $dlg.Close() } })
+    [void]$dlg.ShowDialog()
+}
+
 function Show-ToolboxPage {
     # Hide every main-menu tile
     foreach ($c in $script:mainTiles) { $c.Visible = $false }
@@ -1446,6 +1680,7 @@ function Show-ToolboxPage {
         $tbItems = @(
             @{Name="USB Latency Analyzer";                URL="USB_ANALYZER";   Desc="Count chips between your device and CPU. More chips = more latency"},
             @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";    Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+            @{Name="Beta Portal";                         URL="BETA_PORTAL";    Desc="Enroll your board in the beta program and receive early firmware updates"},
             @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";  Desc="Optimise and Debloat Windows"},
             @{Name="Back";                                URL="BACK";           Desc="Return to main menu"}
         )
@@ -1483,6 +1718,27 @@ function Show-ToolboxPage {
                 if ($tu -eq "BACK")          { Show-MainPage; return }
                 if ($tu -eq "USB_ANALYZER")  { Show-UsbAnalyzer; return }
                 if ($tu -eq "GAMEBAR_FIX")   { Invoke-GameBarNotificationFix; return }
+                if ($tu -eq "BETA_PORTAL") {
+                    $targetUrl = "https://beta.mariusheier.com/"
+                    $defaultBrowser = Get-DefaultBrowser
+                    $browserPath = Get-BrowserPath $defaultBrowser
+                    if (-not $browserPath) {
+                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                            if ($browser -ne $defaultBrowser) {
+                                $browserPath = Get-BrowserPath $browser
+                                if ($browserPath) { break }
+                            }
+                        }
+                    }
+                    if ($browserPath) {
+                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                        $wW=1200; $wH=800
+                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
+                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
+                    } else { Start-Process $targetUrl }
+                    return
+                }
+                if ($tu -eq "APP_INFO")      { Show-AppInfoDialog; return }
                 if ($tu -eq "FR33THY_GUIDE") {
                     $targetUrl = "https://github.com/FR33THYFR33THY/Ultimate"
                     $defaultBrowser = Get-DefaultBrowser
@@ -1533,10 +1789,10 @@ $websites = @(
     @{Name="Polling Rate Checker";     URL="https://tools.mariusheier.com/poll_checker.html";            Desc="Test and verify your controller's polling rate"},
     @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
     @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
-    @{Name="Beta Portal";              URL="https://beta.mariusheier.com/";                              Desc="Enroll your board in the beta program and receive early firmware updates"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
     @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
     @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal, FR33THY Ultimate Guide"},
+    @{Name="App Information";          URL="APP_INFO";                                                   Desc="View information about this application"},
     @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
 )
 
@@ -1623,6 +1879,11 @@ foreach ($site in $websites) {
         
         if ($targetUrl -eq "GAMEBAR_FIX") {
             Invoke-GameBarNotificationFix
+            return
+        }
+        
+        if ($targetUrl -eq "APP_INFO") {
+            Show-AppInfoDialog
             return
         }
         
@@ -1731,7 +1992,7 @@ foreach ($site in $websites) {
 
 $script:rgbHue = 0
 $script:rgbTimer = New-Object System.Windows.Forms.Timer
-$script:rgbTimer.Interval = 20
+$script:rgbTimer.Interval = 40
 
 $script:rgbTimer.Add_Tick({
     $script:rgbHue = ($script:rgbHue + 2) % 360
