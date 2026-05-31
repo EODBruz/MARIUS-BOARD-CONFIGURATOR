@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HID Controller Telemetry — Diagnostic v0.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Inter+Tight:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --bg-elev: #131316;
+    --bg-elev-2: #1a1a1f;
+    --line: #26262d;
+    --line-bright: #3a3a44;
+    --text: #e8e8ec;
+    --text-dim: #8a8a96;
+    --text-faint: #4a4a54;
+    --accent: #00e5ff;
+    --accent-warm: #ffb800;
+    --accent-bad: #ff3355;
+    --accent-good: #00ff88;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(0, 229, 255, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(255, 184, 0, 0.03) 0%, transparent 40%);
+  }
+
+  .scanlines::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(255, 255, 255, 0.008) 2px,
+      rgba(255, 255, 255, 0.008) 3px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .brand-title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .brand-sub {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+  }
+
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .meta-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+  }
+
+  .meta-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+  }
+
+  .meta-value {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* CONNECT BAR */
+  .connect-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 10px 18px;
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  button:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  button:disabled {
+    color: var(--text-faint);
+    border-color: var(--line);
+    cursor: not-allowed;
+  }
+
+  button:disabled:hover {
+    background: transparent;
+  }
+
+  button.secondary {
+    color: var(--text-dim);
+    border-color: var(--line-bright);
+  }
+
+  button.secondary:hover {
+    background: var(--line-bright);
+    color: var(--text);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    border: 1px solid var(--line);
+    margin-left: auto;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+  }
+
+  .status-dot.live {
+    background: var(--accent-good);
+    box-shadow: 0 0 8px var(--accent-good);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* HERO METRICS */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+
+  .hero-cell {
+    background: var(--bg-elev);
+    padding: 24px 28px;
+    position: relative;
+  }
+
+  .hero-cell::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+
+  .hero-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .hero-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .hero-unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .hero-sub {
+    margin-top: 12px;
+    display: flex;
+    gap: 18px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hero-sub span strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .sparkline {
+    height: 32px;
+    margin-top: 12px;
+    width: 100%;
+    display: block;
+  }
+
+  /* INFO PANELS */
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .panel {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line-bright);
+    background: var(--bg-elev-2);
+  }
+
+  .panel-title {
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    font-weight: 800;
+  }
+
+  .panel-marker {
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+  }
+
+  .panel-body {
+    padding: 16px;
+  }
+
+  .kv-grid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 8px 16px;
+    font-size: 12px;
+  }
+
+  .kv-key {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding-top: 2px;
+  }
+
+  .kv-val {
+    color: var(--text);
+    word-break: break-all;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kv-val.accent { color: var(--accent); }
+  .kv-val.warn { color: var(--accent-warm); }
+  .kv-val.bad { color: var(--accent-bad); }
+  .kv-val.good { color: var(--accent-good); }
+
+  /* RAW BYTES */
+  .byte-row {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .byte-row:last-child { border-bottom: none; }
+
+  .byte-idx {
+    color: var(--text-faint);
+    width: 28px;
+  }
+
+  .byte {
+    background: var(--bg-elev-2);
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    min-width: 24px;
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .byte.changed {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  .byte.zero { color: var(--text-faint); }
+
+  /* PARSED FIELDS */
+  .field-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    font-size: 11px;
+  }
+
+  .field-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: var(--bg-elev-2);
+    border-left: 2px solid transparent;
+  }
+
+  .field-row.active {
+    border-left-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .field-name {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .field-row.active .field-name {
+    color: var(--accent);
+  }
+
+  .field-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  /* LOG */
+  .log-panel {
+    margin-top: 24px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+  }
+
+  .log-body {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-size: 11px;
+    background: #08080a;
+  }
+
+  .log-entry {
+    padding: 2px 0;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .log-entry.error { color: var(--accent-bad); }
+  .log-entry.info { color: var(--accent); }
+  .log-entry.success { color: var(--accent-good); }
+
+  .log-time {
+    color: var(--text-faint);
+    margin-right: 8px;
+  }
+
+  /* HINT */
+  .hint-card {
+    background: linear-gradient(135deg, rgba(0,229,255,0.04), rgba(0,229,255,0.01));
+    border: 1px solid rgba(0,229,255,0.2);
+    padding: 20px;
+    margin-bottom: 24px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .hint-card strong {
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .hint-card code {
+    background: var(--bg-elev);
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  /* TESTS — circularity / deadzone / range */
+  .panel-desc {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+    max-width: 720px;
+  }
+  .panel-desc strong { color: var(--text); font-weight: 500; }
+
+  .controls-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+
+  .stick-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .stick-test { display: flex; flex-direction: column; gap: 12px; }
+  .stick-test-label {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim);
+  }
+
+  .canvas-frame {
+    position: relative;
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    background: var(--bg-elev-2);
+    overflow: hidden;
+  }
+  .canvas-frame canvas { width: 100%; height: 100%; display: block; }
+  .canvas-coords {
+    position: absolute; bottom: 8px; right: 10px;
+    font-size: 10px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+  }
+  .canvas-zoom-tag {
+    position: absolute; top: 8px; right: 10px;
+    font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent); background: rgba(0,0,0,0.4);
+    padding: 2px 6px; border: 1px solid var(--accent);
+  }
+  .canvas-zoom-tag.hidden { display: none; }
+
+  .result-card {
+    display: flex;
+    gap: 24px;
+    padding: 14px 16px;
+    background: var(--bg-elev-2);
+    border-left: 2px solid var(--line-bright);
+    font-variant-numeric: tabular-nums;
+  }
+  .result-card.good { border-left-color: var(--accent-good); }
+  .result-card.warn { border-left-color: var(--accent-warm); }
+  .result-card.bad  { border-left-color: var(--accent-bad); }
+  .result-card.idle { border-left-color: var(--line-bright); color: var(--text-dim); }
+
+  .result-stat { display: flex; flex-direction: column; gap: 4px; }
+  .result-label {
+    font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .result-value { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .result-value.score-good { color: var(--accent-good); }
+  .result-value.score-warn { color: var(--accent-warm); }
+  .result-value.score-bad  { color: var(--accent-bad); }
+
+  .timer { font-size: 11px; color: var(--text-dim); letter-spacing: 0.15em; margin-left: 8px; }
+  .timer.running { color: var(--accent); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line-bright); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+</style>
+</head>
+<body class="scanlines">
+<div class="container">
+
+  <header>
+    <div class="brand">
+      <div class="brand-title">HID Telemetry <em>// Diagnostic</em></div>
+      <div class="brand-sub">TheQuest · controller probe v0.1</div>
+    </div>
+    <div class="header-meta">
+      <div class="meta-block">
+        <div class="meta-label">Session</div>
+        <div class="meta-value" id="meta-session">—</div>
+      </div>
+      <div class="meta-block">
+        <div class="meta-label">Uptime</div>
+        <div class="meta-value" id="meta-uptime">00:00:00</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hint-card" id="webhid-hint">
+    <strong>// Read me first</strong>
+    Open this in Chrome, Edge, or Opera (Firefox/Safari don't support WebHID). Click <code>Connect Controller</code>, select your controller in the picker. The page will dump everything the controller exposes — VID/PID, raw HID reports, polling rate, parsed DualSense fields. This is a read-only observer; it does not affect controller input to games.
+  </div>
+
+  <div class="connect-bar">
+    <button id="btn-connect">Connect Controller</button>
+    <button id="btn-disconnect" class="secondary" disabled>Disconnect</button>
+    <button id="btn-export" class="secondary" disabled>Export Diagnostic</button>
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Awaiting connection</span>
+    </div>
+  </div>
+
+  <!-- HERO METRICS -->
+  <div class="hero-grid">
+    <div class="hero-cell">
+      <div class="hero-label">Polling Rate</div>
+      <div class="hero-value">
+        <span id="hero-poll">—</span>
+        <span class="hero-unit">Hz</span>
+      </div>
+      <div class="hero-sub">
+        <span>peak <strong id="poll-peak">—</strong></span>
+        <span>avg <strong id="poll-avg">—</strong></span>
+      </div>
+      <svg class="sparkline" id="spark-poll" viewBox="0 0 300 32" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="hero-cell">
+      <div class="hero-label">Polling Latency</div>
+      <div class="hero-value">
+        <span id="hero-interval">—</span>
+        <span class="hero-unit">ms</span>
+      </div>
+      <div class="hero-sub">
+        <span>min <strong id="int-min">—</strong></span>
+        <span>max <strong id="int-max">—</strong></span>
+        <span>jitter <strong id="int-jit">—</strong></span>
+      </div>
+      <svg class="sparkline" id="spark-interval" viewBox="0 0 300 32" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="hero-cell">
+      <div class="hero-label">Reports Received</div>
+      <div class="hero-value">
+        <span id="hero-count">0</span>
+        <span class="hero-unit">pkts</span>
+      </div>
+      <div class="hero-sub">
+        <span>size <strong id="report-size">—</strong> B</span>
+        <span>id <strong id="report-id">—</strong></span>
+      </div>
+      <svg class="sparkline" id="spark-bytes" viewBox="0 0 300 32" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <!-- INFO PANELS -->
+  <div class="panel-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Device Identity</div>
+        <div class="panel-marker">// HID descriptor</div>
+      </div>
+      <div class="panel-body">
+        <div class="kv-grid" id="device-info">
+          <div class="kv-key">Status</div><div class="kv-val">No device connected</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Detected Profile</div>
+        <div class="panel-marker">// auto-classify</div>
+      </div>
+      <div class="panel-body">
+        <div class="kv-grid" id="profile-info">
+          <div class="kv-key">Profile</div><div class="kv-val">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DUALSENSE CONTROLLER INFO -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">DualSense Controller Info</div>
+      <div class="panel-marker">// feature-report readout</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Reads identity and calibration-lock data straight off the controller's firmware
+        (Sony DualSense / DualSense Edge only). <strong>Read-only</strong> — sends no writes.
+      </p>
+      <div class="controls-row">
+        <button id="ds5-info-btn" disabled>Read Controller Info</button>
+        <span class="timer" id="ds5-info-status">—</span>
+      </div>
+      <div class="kv-grid" id="ds5-info-grid" style="margin-top:16px;">
+        <div class="kv-key">Status</div><div class="kv-val">Not read yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTS · CIRCULARITY -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Circularity Test</div>
+      <div class="panel-marker">// trace + score</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Click <strong>Test</strong> and rotate each stick around the rim once. The test runs for <strong>10 seconds</strong>,
+        then freezes the result so you can read it. <strong>Error</strong> is the RMS deviation from a perfect unit circle
+        (lower = better; aim for &lt;5%). <strong>Coverage</strong> shows how many of the 48 angular sectors you've pushed through.
+        Click Test again to run a fresh sweep.
+      </p>
+      <div class="controls-row">
+        <button id="circ-test">Test</button>
+        <span class="timer" id="circ-timer">—</span>
+      </div>
+      <div class="stick-pair">
+        <div class="stick-test">
+          <div class="stick-test-label">L · STICK</div>
+          <div class="canvas-frame">
+            <canvas id="circ-canvas-l" width="500" height="500"></canvas>
+            <span class="canvas-coords" id="circ-coords-l">0.000, 0.000</span>
+          </div>
+          <div class="result-card idle" id="circ-result-l">
+            <div class="result-stat"><span class="result-label">Error</span><span class="result-value" id="circ-score-l">—</span></div>
+            <div class="result-stat"><span class="result-label">Coverage</span><span class="result-value" id="circ-coverage-l">—</span></div>
+            <div class="result-stat"><span class="result-label">Samples</span><span class="result-value" id="circ-samples-l">0</span></div>
+          </div>
+        </div>
+        <div class="stick-test">
+          <div class="stick-test-label">R · STICK</div>
+          <div class="canvas-frame">
+            <canvas id="circ-canvas-r" width="500" height="500"></canvas>
+            <span class="canvas-coords" id="circ-coords-r">0.000, 0.000</span>
+          </div>
+          <div class="result-card idle" id="circ-result-r">
+            <div class="result-stat"><span class="result-label">Error</span><span class="result-value" id="circ-score-r">—</span></div>
+            <div class="result-stat"><span class="result-label">Coverage</span><span class="result-value" id="circ-coverage-r">—</span></div>
+            <div class="result-stat"><span class="result-label">Samples</span><span class="result-value" id="circ-samples-r">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTS · DEADZONE / DRIFT -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Deadzone / Drift Test</div>
+      <div class="panel-marker">// rest test · 10× zoom</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Hands off the sticks for 5 seconds. <strong>Drift</strong> = how far the rest position is from
+        center. <strong>Noise</strong> = how much the rest reading wobbles. View is permanently zoomed
+        10× — center should stay well within 0.05.
+      </p>
+      <div class="controls-row">
+        <button id="dz-start">Start (5s)</button>
+        <button id="dz-stop" class="secondary" disabled>Stop</button>
+        <button id="dz-reset" class="secondary" disabled>Reset</button>
+        <button id="dz-zoom" class="secondary">Toggle 10× Zoom</button>
+        <span class="timer" id="dz-timer">—</span>
+      </div>
+      <div class="stick-pair">
+        <div class="stick-test">
+          <div class="stick-test-label">L · STICK</div>
+          <div class="canvas-frame">
+            <canvas id="dz-canvas-l" width="400" height="400"></canvas>
+            <span class="canvas-zoom-tag" id="dz-zoom-tag-l" style="color:var(--accent-warm);border-color:var(--accent-warm);">10× ZOOM</span>
+          </div>
+          <div class="result-card idle" id="dz-result-l">
+            <div class="result-stat"><span class="result-label">Drift</span><span class="result-value" id="dz-drift-l">—</span></div>
+            <div class="result-stat"><span class="result-label">Noise</span><span class="result-value" id="dz-noise-l">—</span></div>
+            <div class="result-stat"><span class="result-label">Status</span><span class="result-value" id="dz-status-l">—</span></div>
+          </div>
+        </div>
+        <div class="stick-test">
+          <div class="stick-test-label">R · STICK</div>
+          <div class="canvas-frame">
+            <canvas id="dz-canvas-r" width="400" height="400"></canvas>
+            <span class="canvas-zoom-tag" id="dz-zoom-tag-r" style="color:var(--accent-warm);border-color:var(--accent-warm);">10× ZOOM</span>
+          </div>
+          <div class="result-card idle" id="dz-result-r">
+            <div class="result-stat"><span class="result-label">Drift</span><span class="result-value" id="dz-drift-r">—</span></div>
+            <div class="result-stat"><span class="result-label">Noise</span><span class="result-value" id="dz-noise-r">—</span></div>
+            <div class="result-stat"><span class="result-label">Status</span><span class="result-value" id="dz-status-r">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTS · HARDWARE RECENTER -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Stick Calibration · Hardware Recenter</div>
+      <div class="panel-marker">// writes to controller NVS</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Writes the current stick rest position to the controller's <strong>permanent flash memory</strong>.
+        Whatever the sticks are reading at the moment you click becomes the new <em>0, 0</em> center —
+        so games and every other piece of software will see a perfectly centered stick from now on.
+        Hands <strong>off the sticks</strong> when you click. Only works on Sony-protocol pads
+        (DualSense / DualSense Edge, and TMR pads that pass through the Sony calibration commands).
+        <strong style="color:var(--accent-bad)">This is irreversible</strong> except by running it again with the sticks at a different rest position.
+      </p>
+      <div class="controls-row">
+        <button id="recenter-btn" disabled>Recenter Sticks</button>
+        <span class="timer" id="recenter-status">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTS · RANGE CALIBRATION -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Stick Calibration · Range</div>
+      <div class="panel-marker">// writes to controller NVS</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        The companion to Recenter. Click <strong>Start</strong>, then slowly rotate <strong>both sticks</strong>
+        around their full outer edge a few times so the controller relearns each axis's true min/max.
+        Click <strong>Finish &amp; Save</strong> to commit. Sony DualSense only.
+        <strong style="color:var(--accent-bad)">Writes to permanent flash.</strong>
+      </p>
+      <div class="controls-row">
+        <button id="range-start-btn" disabled>Start Range Calibration</button>
+        <button id="range-finish-btn" class="secondary" disabled>Finish &amp; Save</button>
+        <span class="timer" id="range-status">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DS5 LIVE · BATTERY + TRIGGER TRAVEL -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Battery &amp; Trigger Travel</div>
+      <div class="panel-marker">// live · DualSense USB</div>
+    </div>
+    <div class="panel-body">
+      <div style="display:grid; grid-template-columns: 1fr 2fr; gap:32px; align-items:flex-start;">
+        <div>
+          <div class="hero-label">Battery</div>
+          <div class="hero-value" style="font-size:44px;"><span id="batt-pct">—</span><span class="hero-unit">%</span></div>
+          <div style="position:relative; height:14px; background:var(--bg-elev-2); border:1px solid var(--line); margin-top:10px;">
+            <div id="batt-fill" style="position:absolute; top:0; bottom:0; left:0; width:0; background:var(--accent-good); transition:width .3s;"></div>
+          </div>
+          <div class="hero-sub" style="margin-top:10px;"><span>status <strong id="batt-status">—</strong></span></div>
+        </div>
+        <div>
+          <div class="hero-label">Trigger Travel · 0–255</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:10px;">
+            <div>
+              <div class="field-row" style="background:transparent; padding:0 0 4px 0;"><span class="field-name">L2</span><span class="field-val" id="l2-val">0</span></div>
+              <div style="position:relative; height:14px; background:var(--bg-elev-2); border:1px solid var(--line);">
+                <div id="l2-fill" style="position:absolute; top:0; bottom:0; left:0; width:0; background:var(--accent-good);"></div>
+              </div>
+              <svg class="sparkline" id="spark-l2" viewBox="0 0 300 32" preserveAspectRatio="none"></svg>
+            </div>
+            <div>
+              <div class="field-row" style="background:transparent; padding:0 0 4px 0;"><span class="field-name">R2</span><span class="field-val" id="r2-val">0</span></div>
+              <div style="position:relative; height:14px; background:var(--bg-elev-2); border:1px solid var(--line);">
+                <div id="r2-fill" style="position:absolute; top:0; bottom:0; left:0; width:0; background:var(--accent-warm);"></div>
+              </div>
+              <svg class="sparkline" id="spark-r2" viewBox="0 0 300 32" preserveAspectRatio="none"></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DS5 BUTTON TEST -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Button Test · Chatter Detection</div>
+      <div class="panel-marker">// press counts + double-fire flags</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Press each button. <strong>Count</strong> rises once per genuine press, and held buttons light up.
+        A red count with <strong>⚠</strong> means <strong>chatter</strong> — the button re-fired within 40&nbsp;ms of
+        releasing, the signature of a worn or bouncing switch.
+      </p>
+      <div class="controls-row">
+        <button id="btn-test-reset" class="secondary">Reset Counts</button>
+      </div>
+      <div class="field-list" id="button-test-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="field-row"><span class="field-name">awaiting input</span><span class="field-val">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DS5 LED CONTROL -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">LED Control</div>
+      <div class="panel-marker">// output report · resets on reconnect</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Live control of the DualSense lights. <strong>Temporary</strong> — reconnecting reverts to system defaults.
+        Sony DualSense only.
+      </p>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:32px;">
+        <div>
+          <div class="hero-label">Lightbar</div>
+          <input type="color" id="lightbar-color" class="ds5-output-ctrl" value="#00e5ff"
+                 style="width:100%; height:48px; margin-top:8px; background:var(--bg-elev-2); border:1px solid var(--line); cursor:pointer;" disabled>
+        </div>
+        <div>
+          <div class="hero-label">Player LEDs</div>
+          <div class="controls-row" style="margin-top:8px; flex-wrap:wrap;">
+            <button class="player-led-btn ds5-output-ctrl secondary" data-pattern="0" disabled>Off</button>
+            <button class="player-led-btn ds5-output-ctrl secondary" data-pattern="4" disabled>P1</button>
+            <button class="player-led-btn ds5-output-ctrl secondary" data-pattern="10" disabled>P2</button>
+            <button class="player-led-btn ds5-output-ctrl secondary" data-pattern="21" disabled>P3</button>
+            <button class="player-led-btn ds5-output-ctrl secondary" data-pattern="27" disabled>P4</button>
+          </div>
+        </div>
+        <div>
+          <div class="hero-label">Mute LED</div>
+          <div class="controls-row" style="margin-top:8px;">
+            <button class="mute-led-btn ds5-output-ctrl secondary" data-state="0" disabled>Off</button>
+            <button class="mute-led-btn ds5-output-ctrl secondary" data-state="1" disabled>Solid</button>
+            <button class="mute-led-btn ds5-output-ctrl secondary" data-state="2" disabled>Pulse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DS5 ADAPTIVE TRIGGERS -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Adaptive Triggers</div>
+      <div class="panel-marker">// output report · experimental</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-desc">
+        Apply force-feedback effects to both triggers (L2 + R2). <strong>Temporary</strong>, resets on reconnect.
+        Param tuning may vary by firmware. Sony DualSense only.
+      </p>
+      <div class="controls-row">
+        <button class="trigger-fx-btn ds5-output-ctrl secondary" data-mode="0" disabled>Off</button>
+        <button class="trigger-fx-btn ds5-output-ctrl secondary" data-mode="1" disabled>Resistance</button>
+        <button class="trigger-fx-btn ds5-output-ctrl secondary" data-mode="2" disabled>Weapon</button>
+        <button class="trigger-fx-btn ds5-output-ctrl secondary" data-mode="6" disabled>Vibration</button>
+      </div>
+      <div style="margin-top:16px; max-width:380px;">
+        <div class="hero-label">Intensity · <span id="trigger-intensity-val" style="color:var(--accent)">200</span></div>
+        <input type="range" id="trigger-intensity" class="ds5-output-ctrl" min="0" max="255" value="200"
+               style="width:100%; margin-top:8px;" disabled>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARSED FIELDS -->
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel-header">
+      <div class="panel-title">Parsed Fields // DualSense Profile</div>
+      <div class="panel-marker">// only valid if profile matches</div>
+    </div>
+    <div class="panel-body">
+      <div class="field-list" id="parsed-fields">
+        <div class="field-row"><span class="field-name">awaiting input</span><span class="field-val">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RAW BYTES -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Raw HID Report // Latest Packet</div>
+      <div class="panel-marker">// changed bytes highlighted</div>
+    </div>
+    <div class="panel-body" id="raw-bytes">
+      <div class="byte-row"><span class="byte-idx">—</span><span style="color: var(--text-faint);">no data</span></div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-panel">
+    <div class="panel-header">
+      <div class="panel-title">Event Log</div>
+      <div class="panel-marker">// console</div>
+    </div>
+    <div class="log-body" id="log"></div>
+  </div>
+
+</div>
+
+<script>
+// =============================================================
+// HID Controller Telemetry — Diagnostic v0.1
+// Read-only observer for any HID gamepad via WebHID
+// =============================================================
+
+const sessionId = Math.random().toString(36).slice(2, 8).toUpperCase();
+document.getElementById('meta-session').textContent = sessionId;
+const sessionStart = performance.now();
+
+setInterval(() => {
+  const s = Math.floor((performance.now() - sessionStart) / 1000);
+  const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  document.getElementById('meta-uptime').textContent = `${hh}:${mm}:${ss}`;
+}, 500);
+
+// ---------- LOGGING ----------
+const logEl = document.getElementById('log');
+function log(msg, type = '') {
+  const t = new Date().toISOString().slice(11, 23);
+  const e = document.createElement('div');
+  e.className = `log-entry ${type}`;
+  e.innerHTML = `<span class="log-time">${t}</span>${msg}`;
+  logEl.appendChild(e);
+  logEl.scrollTop = logEl.scrollHeight;
+  if (logEl.children.length > 500) logEl.removeChild(logEl.firstChild);
+}
+
+log('System initialized. WebHID API: ' + (navigator.hid ? 'available' : 'NOT AVAILABLE — use Chrome/Edge/Opera'),
+    navigator.hid ? 'success' : 'error');
+
+if (!navigator.hid) {
+  document.getElementById('btn-connect').disabled = true;
+  document.getElementById('btn-connect').textContent = 'WebHID Unsupported';
+}
+
+// ---------- STATE ----------
+let device = null;
+let reportTimestamps = [];
+let lastReportTime = null;
+let intervalsBuffer = [];
+let reportCount = 0;
+let lastReportBytes = null;
+let pollHistory = [];
+let intervalHistory = [];
+let byteHistory = [];
+let firstReport = null;
+let peakPoll = 0;
+
+// ---------- BUTTONS ----------
+const btnConnect = document.getElementById('btn-connect');
+const btnDisconnect = document.getElementById('btn-disconnect');
+const btnExport = document.getElementById('btn-export');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+btnConnect.addEventListener('click', async () => {
+  if (!navigator.hid) return;
+  try {
+    log('Requesting device picker...', 'info');
+    const devices = await navigator.hid.requestDevice({ filters: [] });
+    if (devices.length === 0) {
+      log('No device selected.', '');
+      return;
+    }
+    device = devices[0];
+    if (!device.opened) await device.open();
+    log(`Connected: ${device.productName}`, 'success');
+    setupDevice();
+  } catch (err) {
+    log('Connection error: ' + err.message, 'error');
+  }
+});
+
+btnDisconnect.addEventListener('click', async () => {
+  if (device && device.opened) {
+    try { await device.close(); } catch (e) {}
+  }
+  resetState();
+  log('Disconnected.', 'info');
+});
+
+btnExport.addEventListener('click', () => {
+  const payload = {
+    session: sessionId,
+    timestamp: new Date().toISOString(),
+    device: device ? {
+      productName: device.productName,
+      vendorId: '0x' + device.vendorId.toString(16).padStart(4, '0'),
+      productId: '0x' + device.productId.toString(16).padStart(4, '0'),
+      collections: device.collections,
+    } : null,
+    metrics: {
+      reportCount,
+      currentPollRate: pollHistory.length ? pollHistory[pollHistory.length - 1] : 0,
+      peakPollRate: peakPoll,
+      avgInterval: intervalsBuffer.length ? intervalsBuffer.reduce((a,b)=>a+b,0)/intervalsBuffer.length : 0,
+    },
+    firstReport: firstReport ? Array.from(firstReport) : null,
+    lastReport: lastReportBytes ? Array.from(lastReportBytes) : null,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hid-diag-${sessionId}-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Diagnostic exported.', 'success');
+});
+
+// ---------- DEVICE SETUP ----------
+function setupDevice() {
+  btnConnect.disabled = true;
+  btnDisconnect.disabled = false;
+  btnExport.disabled = false;
+  statusDot.classList.add('live');
+  statusText.textContent = 'Listening';
+
+  // Populate device info panel
+  const dev = document.getElementById('device-info');
+  const vidHex = '0x' + device.vendorId.toString(16).padStart(4, '0').toUpperCase();
+  const pidHex = '0x' + device.productId.toString(16).padStart(4, '0').toUpperCase();
+  dev.innerHTML = `
+    <div class="kv-key">Product</div><div class="kv-val">${escapeHtml(device.productName || 'Unknown')}</div>
+    <div class="kv-key">Vendor ID</div><div class="kv-val accent">${vidHex} <span style="color:var(--text-faint)">(${device.vendorId})</span></div>
+    <div class="kv-key">Product ID</div><div class="kv-val accent">${pidHex} <span style="color:var(--text-faint)">(${device.productId})</span></div>
+    <div class="kv-key">Collections</div><div class="kv-val">${device.collections.length}</div>
+    <div class="kv-key">Usage Page</div><div class="kv-val">${device.collections[0]?.usagePage ? '0x' + device.collections[0].usagePage.toString(16).toUpperCase() : '—'}</div>
+    <div class="kv-key">Usage</div><div class="kv-val">${device.collections[0]?.usage ? '0x' + device.collections[0].usage.toString(16).toUpperCase() : '—'}</div>
+    <div class="kv-key">Input Reports</div><div class="kv-val">${countReports(device, 'inputReports')}</div>
+    <div class="kv-key">Output Reports</div><div class="kv-val">${countReports(device, 'outputReports')}</div>
+    <div class="kv-key">Feature Reports</div><div class="kv-val">${countReports(device, 'featureReports')}</div>
+  `;
+
+  // Detect profile
+  const profile = detectProfile(device);
+  const prof = document.getElementById('profile-info');
+  prof.innerHTML = `
+    <div class="kv-key">Profile</div><div class="kv-val ${profile.match ? 'good' : 'warn'}">${profile.name}</div>
+    <div class="kv-key">Confidence</div><div class="kv-val">${profile.confidence}</div>
+    <div class="kv-key">Notes</div><div class="kv-val" style="font-size:11px;color:var(--text-dim)">${profile.notes}</div>
+  `;
+
+  log(`Device profile detected: ${profile.name} (${profile.confidence})`, 'info');
+  log(`VID/PID: ${vidHex}/${pidHex}`, 'info');
+
+  // Listen for reports
+  device.addEventListener('inputreport', handleReport);
+  log('Listening for HID input reports...', 'success');
+
+  updateSonyButtons();
+}
+
+function countReports(dev, kind) {
+  let n = 0;
+  for (const c of dev.collections) n += (c[kind] || []).length;
+  return n;
+}
+
+// ---------- PROFILE DETECTION ----------
+function detectProfile(dev) {
+  const vid = dev.vendorId;
+  const pid = dev.productId;
+
+  // Sony DualSense
+  if (vid === 0x054C && pid === 0x0CE6) {
+    return {
+      match: true, name: 'DualSense (PS5)', confidence: 'High',
+      notes: 'Sony VID/PID. Will parse standard DualSense report layout.'
+    };
+  }
+  // DualSense Edge
+  if (vid === 0x054C && pid === 0x0DF2) {
+    return {
+      match: true, name: 'DualSense Edge', confidence: 'High',
+      notes: 'Sony Edge variant — same USB report layout as standard DualSense.'
+    };
+  }
+  // DualShock 4
+  if (vid === 0x054C && (pid === 0x05C4 || pid === 0x09CC)) {
+    return { match: true, name: 'DualShock 4 (PS4)', confidence: 'High', notes: 'PS4 controller report layout.' };
+  }
+  // Xbox One/Series (XInput on Windows usually intercepts these)
+  if (vid === 0x045E) {
+    return { match: false, name: 'Microsoft Xbox', confidence: 'Med', notes: 'XInput likely intercepting; HID may be limited.' };
+  }
+  // Switch Pro
+  if (vid === 0x057E && pid === 0x2009) {
+    return { match: true, name: 'Switch Pro Controller', confidence: 'High', notes: 'Nintendo Switch Pro.' };
+  }
+  // 8BitDo
+  if (vid === 0x2DC8) {
+    return { match: false, name: '8BitDo Controller', confidence: 'Med', notes: 'Generic HID parsing only.' };
+  }
+
+  return {
+    match: false, name: 'Generic HID Gamepad', confidence: 'Low',
+    notes: `Unrecognized VID/PID. Will dump raw bytes only — no parsed fields.`
+  };
+}
+
+// ---------- REPORT HANDLER ----------
+function handleReport(event) {
+  const now = performance.now();
+  const data = new Uint8Array(event.data.buffer);
+  const reportId = event.reportId;
+
+  reportCount++;
+  if (!firstReport) firstReport = data.slice();
+
+  // interval calculation
+  if (lastReportTime !== null) {
+    const dt = now - lastReportTime;
+    intervalsBuffer.push(dt);
+    if (intervalsBuffer.length > 1000) intervalsBuffer.shift();
+  }
+  lastReportTime = now;
+
+  // poll rate (count reports in last 1s)
+  reportTimestamps.push(now);
+  while (reportTimestamps.length && reportTimestamps[0] < now - 1000) {
+    reportTimestamps.shift();
+  }
+
+  // diff for changed bytes
+  const changed = lastReportBytes ? data.map((b, i) => b !== lastReportBytes[i]) : null;
+  lastReportBytes = data.slice();
+
+  // Update raw bytes display
+  renderRawBytes(data, changed, reportId);
+
+  // Dispatch normalized stick samples to the test panels (every report — no throttling).
+  // Only valid for DualSense USB report 0x01 layout.
+  if (reportId === 0x01 && data.length >= 4 && stickSubscribers.size > 0) {
+    const sample = {
+      lx: Math.max(-1, Math.min(1, (data[0] - 128) / 127)),
+      ly: Math.max(-1, Math.min(1, (data[1] - 128) / 127)),
+      rx: Math.max(-1, Math.min(1, (data[2] - 128) / 127)),
+      ry: Math.max(-1, Math.min(1, (data[3] - 128) / 127)),
+    };
+    for (const sub of stickSubscribers) sub(sample);
+  }
+
+  // DS5 extras (battery / trigger travel / button chatter) — processed every report
+  // so chatter detection catches sub-frame double-fires, not just at the 30fps render.
+  if (reportId === 0x01 && data.length >= 10 && device && device.vendorId === 0x054C) {
+    processDs5Extras(data, now);
+  }
+
+  // Update sticks + parsed fields if DualSense
+  parseAndRenderProfile(data, reportId);
+
+  // throttle hero updates to ~30fps
+  if (!handleReport._lastUI || now - handleReport._lastUI > 33) {
+    updateHero(data, reportId);
+    renderDs5Extras();
+    handleReport._lastUI = now;
+  }
+}
+
+// ---------- HERO METRICS ----------
+function updateHero(data, reportId) {
+  const pollRate = reportTimestamps.length;
+  if (pollRate > peakPoll) peakPoll = pollRate;
+  document.getElementById('hero-poll').textContent = pollRate;
+  document.getElementById('poll-peak').textContent = peakPoll;
+  document.getElementById('hero-count').textContent = reportCount.toLocaleString();
+  document.getElementById('report-size').textContent = data.length;
+  document.getElementById('report-id').textContent =
+    '0x' + (reportId || 0).toString(16).padStart(2, '0').toUpperCase();
+
+  if (intervalsBuffer.length > 0) {
+    const avg = intervalsBuffer.reduce((a,b)=>a+b,0) / intervalsBuffer.length;
+    const min = Math.min(...intervalsBuffer);
+    const max = Math.max(...intervalsBuffer);
+    const variance = intervalsBuffer.reduce((s,v)=>s+(v-avg)**2,0) / intervalsBuffer.length;
+    const std = Math.sqrt(variance);
+    document.getElementById('hero-interval').textContent = avg.toFixed(2);
+    document.getElementById('int-min').textContent = min.toFixed(2);
+    document.getElementById('int-max').textContent = max.toFixed(2);
+    document.getElementById('int-jit').textContent = '±' + std.toFixed(2);
+    document.getElementById('poll-avg').textContent = (1000/avg).toFixed(0);
+  }
+
+  // sparklines
+  pollHistory.push(pollRate);
+  if (pollHistory.length > 60) pollHistory.shift();
+  intervalHistory.push(intervalsBuffer.length ? intervalsBuffer[intervalsBuffer.length-1] : 0);
+  if (intervalHistory.length > 60) intervalHistory.shift();
+  byteHistory.push(data.length);
+  if (byteHistory.length > 60) byteHistory.shift();
+
+  drawSpark('spark-poll', pollHistory, '#00e5ff');
+  drawSpark('spark-interval', intervalHistory, '#ffb800');
+  drawSpark('spark-bytes', byteHistory, '#00ff88');
+}
+
+function drawSpark(id, data, color) {
+  const svg = document.getElementById(id);
+  if (data.length < 2) return;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const w = 300, h = 32;
+  const stepX = w / (data.length - 1);
+  let path = '';
+  data.forEach((v, i) => {
+    const x = i * stepX;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  svg.innerHTML = `
+    <path d="${path}" stroke="${color}" stroke-width="1.5" fill="none" opacity="0.9"/>
+    <path d="${path} L ${w},${h} L 0,${h} Z" fill="${color}" opacity="0.08"/>
+  `;
+}
+
+// ---------- RAW BYTES ----------
+function renderRawBytes(data, changed, reportId) {
+  // Skip very frequent updates — only render every ~50ms
+  if (!renderRawBytes._last || performance.now() - renderRawBytes._last > 50) {
+    const el = document.getElementById('raw-bytes');
+    const PER_ROW = 16;
+    let html = '';
+    if (reportId) {
+      html += `<div class="byte-row"><span class="byte-idx">RID</span><span class="byte" style="border-color:var(--accent);color:var(--accent)">${reportId.toString(16).padStart(2,'0').toUpperCase()}</span></div>`;
+    }
+    for (let r = 0; r < Math.ceil(data.length / PER_ROW); r++) {
+      const start = r * PER_ROW;
+      const idx = start.toString(16).padStart(3, '0').toUpperCase();
+      let cells = '';
+      for (let i = 0; i < PER_ROW && start + i < data.length; i++) {
+        const b = data[start + i];
+        const isChanged = changed && changed[start + i];
+        const isZero = b === 0;
+        const cls = `byte ${isChanged ? 'changed' : ''} ${isZero ? 'zero' : ''}`;
+        cells += `<span class="${cls}">${b.toString(16).padStart(2,'0').toUpperCase()}</span>`;
+      }
+      html += `<div class="byte-row"><span class="byte-idx">${idx}</span>${cells}</div>`;
+    }
+    el.innerHTML = html;
+    renderRawBytes._last = performance.now();
+  }
+}
+
+// ---------- DUALSENSE PARSE ----------
+// Standard DualSense USB input report (id 0x01, ~63 bytes after WebHID strips the ID byte):
+// byte 0: LX (0-255, 128 center)
+// byte 1: LY
+// byte 2: RX
+// byte 3: RY
+// byte 4: L2 trigger (0-255)
+// byte 5: R2 trigger
+// byte 6: counter
+// byte 7: bits 0-3 = dpad, bits 4-7 = square/cross/circle/triangle
+// byte 8: shoulder/option/share/stick clicks
+// byte 9: ps button, touchpad click, mute
+// (gyro/accel/battery sit further in the report but are not parsed here)
+// Bluetooth compact 0x01 is only ~9 bytes with a different layout — we fall through to generic.
+
+function parseAndRenderProfile(data, reportId) {
+  // Coalesce visual updates to ~60fps. At 1000Hz polling we'd otherwise rebuild the
+  // parsed-fields DOM 1000×/sec and starve the main thread, which is what makes the sticks feel laggy.
+  const now = performance.now();
+  if (parseAndRenderProfile._lastDraw && now - parseAndRenderProfile._lastDraw < 16) return;
+  parseAndRenderProfile._lastDraw = now;
+
+  const fieldsEl = document.getElementById('parsed-fields');
+  const isDualSense = device && device.vendorId === 0x054C;
+  const isStandardReport = reportId === 0x01 && data.length >= 30;
+
+  if (!isDualSense || !isStandardReport) {
+    if (isDualSense && !parseAndRenderProfile._warned) {
+      log(`DualSense on report 0x${(reportId || 0).toString(16).padStart(2,'0').toUpperCase()} (${data.length} B) — parser expects USB 0x01, showing generic only.`, 'error');
+      parseAndRenderProfile._warned = true;
+    }
+    fieldsEl.innerHTML = `
+      <div class="field-row"><span class="field-name">profile</span><span class="field-val" style="color:var(--accent-warm)">${isDualSense ? 'dualsense (non-standard report)' : 'unknown'}</span></div>
+      <div class="field-row"><span class="field-name">parser</span><span class="field-val">generic guess</span></div>
+      <div class="field-row"><span class="field-name">report id</span><span class="field-val">0x${(reportId || 0).toString(16).padStart(2,'0').toUpperCase()}</span></div>
+      <div class="field-row"><span class="field-name">payload size</span><span class="field-val">${data.length} B</span></div>
+    `;
+    return;
+  }
+
+  // WebHID strips the report ID from data, so byte 0 here is LX (originally byte 1).
+  const off = 0;
+
+  const lx = data[off + 0];
+  const ly = data[off + 1];
+  const rx = data[off + 2];
+  const ry = data[off + 3];
+  const l2 = data[off + 4];
+  const r2 = data[off + 5];
+  const counter = data[off + 6];
+  const btnByte1 = data[off + 7] || 0;
+  const btnByte2 = data[off + 8] || 0;
+  const btnByte3 = data[off + 9] || 0;
+
+  const dpad = btnByte1 & 0x0F;
+  const dpadName = ['N','NE','E','SE','S','SW','W','NW','—'][dpad] || '—';
+
+  const square   = !!(btnByte1 & 0x10);
+  const cross    = !!(btnByte1 & 0x20);
+  const circle   = !!(btnByte1 & 0x40);
+  const triangle = !!(btnByte1 & 0x80);
+
+  const l1 = !!(btnByte2 & 0x01);
+  const r1 = !!(btnByte2 & 0x02);
+  const l2btn = !!(btnByte2 & 0x04);
+  const r2btn = !!(btnByte2 & 0x08);
+  const create = !!(btnByte2 & 0x10);
+  const options = !!(btnByte2 & 0x20);
+  const l3 = !!(btnByte2 & 0x40);
+  const r3 = !!(btnByte2 & 0x80);
+
+  const ps = !!(btnByte3 & 0x01);
+  const touchpad = !!(btnByte3 & 0x02);
+  const mute = !!(btnByte3 & 0x04);
+
+  // Sensor timestamp (u32 LE µs at bytes 28-31) — controller's internal clock.
+  // Comparing the delta to the host's report interval reveals clock drift between pad and host.
+  let sensorTs = null, sensorDelta = null;
+  if (data.length >= 32) {
+    const dv = new DataView(data.buffer, data.byteOffset);
+    sensorTs = dv.getUint32(28, true);
+    if (parseAndRenderProfile._lastSensorTs !== undefined) {
+      sensorDelta = (sensorTs - parseAndRenderProfile._lastSensorTs) >>> 0; // u32 wrap-safe
+    }
+    parseAndRenderProfile._lastSensorTs = sensorTs;
+  }
+
+  // Adaptive trigger feedback status (byte 41 = R2, byte 42 = L2).
+  // Non-zero = motor engaged. Low nibble = status, high nibble = effect mode currently driving the trigger.
+  let r2fb = null, l2fb = null;
+  if (data.length >= 43) {
+    r2fb = data[41];
+    l2fb = data[42];
+  }
+
+  const f = (name, val, active) =>
+    `<div class="field-row ${active ? 'active' : ''}"><span class="field-name">${name}</span><span class="field-val">${val}</span></div>`;
+
+  fieldsEl.innerHTML =
+    f('LX raw', lx, false) +
+    f('LY raw', ly, false) +
+    f('RX raw', rx, false) +
+    f('RY raw', ry, false) +
+    f('L2 trigger', l2 + ' / 255', l2 > 0) +
+    f('R2 trigger', r2 + ' / 255', r2 > 0) +
+    f('L2 fb', l2fb !== null ? '0x' + l2fb.toString(16).padStart(2,'0').toUpperCase() : '—', l2fb !== null && l2fb !== 0) +
+    f('R2 fb', r2fb !== null ? '0x' + r2fb.toString(16).padStart(2,'0').toUpperCase() : '—', r2fb !== null && r2fb !== 0) +
+    f('counter', counter, false) +
+    f('sensor ts', sensorTs !== null ? sensorTs.toLocaleString() + ' µs' : '—', false) +
+    f('Δ sensor ts', sensorDelta !== null ? sensorDelta.toLocaleString() + ' µs' : '—', false) +
+    f('dpad', dpadName, dpad !== 8) +
+    f('△ triangle', triangle ? 'PRESS' : '·', triangle) +
+    f('○ circle', circle ? 'PRESS' : '·', circle) +
+    f('✕ cross', cross ? 'PRESS' : '·', cross) +
+    f('□ square', square ? 'PRESS' : '·', square) +
+    f('L1', l1 ? 'PRESS' : '·', l1) +
+    f('R1', r1 ? 'PRESS' : '·', r1) +
+    f('L2 click', l2btn ? 'PRESS' : '·', l2btn) +
+    f('R2 click', r2btn ? 'PRESS' : '·', r2btn) +
+    f('L3', l3 ? 'PRESS' : '·', l3) +
+    f('R3', r3 ? 'PRESS' : '·', r3) +
+    f('create', create ? 'PRESS' : '·', create) +
+    f('options', options ? 'PRESS' : '·', options) +
+    f('PS', ps ? 'PRESS' : '·', ps) +
+    f('touchpad', touchpad ? 'PRESS' : '·', touchpad) +
+    f('mute', mute ? 'PRESS' : '·', mute);
+}
+
+// ---------- UTILS ----------
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function resetState() {
+  device = null;
+  reportTimestamps = [];
+  lastReportTime = null;
+  intervalsBuffer = [];
+  reportCount = 0;
+  lastReportBytes = null;
+  pollHistory = [];
+  intervalHistory = [];
+  byteHistory = [];
+  firstReport = null;
+  peakPoll = 0;
+  btnConnect.disabled = false;
+  btnDisconnect.disabled = true;
+  btnExport.disabled = true;
+  statusDot.classList.remove('live');
+  statusText.textContent = 'Awaiting connection';
+  updateSonyButtons();
+}
+
+// ---------- HOT-PLUG ----------
+if (navigator.hid) {
+  navigator.hid.addEventListener('disconnect', (e) => {
+    if (device && e.device === device) {
+      log('Device disconnected unexpectedly.', 'error');
+      resetState();
+    }
+  });
+}
+
+// =============================================================
+// STICK TESTS — circularity / deadzone / range (read-only)
+// Each test subscribes to normalized stick samples that handleReport
+// dispatches via stickSubscribers. Tests run independently.
+// =============================================================
+const stickSubscribers = new Set();
+const $ = (id) => document.getElementById(id);
+
+function drawStickCanvas(canvasId, points, currentX, currentY, options = {}) {
+  const c = $(canvasId);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const cx = W / 2, cy = H / 2;
+  const margin = 18;
+  const r = Math.min(W, H) / 2 - margin;
+  const zoom = options.zoom || 1;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // grid rings
+  ctx.strokeStyle = '#26262d';
+  ctx.lineWidth = 1;
+  for (const frac of [1, 0.66, 0.33]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * frac, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // circularity radial heatmap (replaces trail dots when provided)
+  if (options.circularityData) {
+    const cd = options.circularityData;
+    const N = cd.length;
+    for (let i = 0; i < N; i++) {
+      const d0 = cd[i];
+      const d1 = cd[(i + 1) % N];
+      if (!d0 || !d1) continue;
+      const a0 = i * 2 * Math.PI / N;
+      const a1 = (i + 1) * 2 * Math.PI / N;
+      const x0 = Math.cos(a0) * d0 * r;
+      const y0 = Math.sin(a0) * d0 * r;
+      const x1 = Math.cos(a1) * d1 * r;
+      const y1 = Math.sin(a1) * d1 * r;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + x0, cy + y0);
+      ctx.lineTo(cx + x1, cy + y1);
+      ctx.closePath();
+      const cc = (d0 + d1) / 2;
+      const hue = circCcToHue(cc);
+      ctx.fillStyle = `hsla(${hue.toFixed(0)}, 100%, 50%, 0.5)`;
+      ctx.fill();
+    }
+    // ideal unit-circle reference ring drawn on top
+    ctx.strokeStyle = 'rgba(0,229,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // crosshair
+  ctx.strokeStyle = '#1a1a1f';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+  ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+  ctx.stroke();
+
+  // trail dots (skipped when a sector heatmap is being drawn)
+  if (!options.circularityData && points && points.length > 0) {
+    ctx.fillStyle = options.dotColor || 'rgba(0,229,255,0.5)';
+    for (const p of points) {
+      const px = cx + p.x * r * zoom;
+      const py = cy + p.y * r * zoom;
+      if (px < 0 || px > W || py < 0 || py > H) continue;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // optional center-of-mass marker
+  if (options.com) {
+    const cmx = cx + options.com.x * r * zoom;
+    const cmy = cy + options.com.y * r * zoom;
+    ctx.strokeStyle = options.comColor || '#ffb800';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cmx - 8, cmy); ctx.lineTo(cmx + 8, cmy);
+    ctx.moveTo(cmx, cmy - 8); ctx.lineTo(cmx, cmy + 8);
+    ctx.stroke();
+  }
+
+  // current position dot
+  if (currentX !== undefined && currentY !== undefined) {
+    const px = cx + currentX * r * zoom;
+    const py = cy + currentY * r * zoom;
+    if (px >= 0 && px <= W && py >= 0 && py <= H) {
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ---------- CIRCULARITY ----------
+// Sector-bucket model (matches dualshock-tools): each of N angular sectors stores the
+// MAX distance the stick reached at that angle. One clean sweep fills the buckets;
+// error = RMS deviation of those filled buckets from the ideal radius of 1.0.
+const CIRC_BUCKETS = 48;
+const CIRC_DURATION_MS = 10000;
+const circ = {
+  running: false, startTime: 0, rafId: null,
+  durationMs: CIRC_DURATION_MS,
+  dataL: new Array(CIRC_BUCKETS).fill(0),
+  dataR: new Array(CIRC_BUCKETS).fill(0),
+  samplesL: 0, samplesR: 0,
+  lastL: { x: 0, y: 0 }, lastR: { x: 0, y: 0 },
+};
+
+function circCcToHue(cc) {
+  // 1.0 = ideal (cyan/blue). Lower = warmer (red). Higher = magenta.
+  const dd = Math.abs(1.0 - cc);
+  if (cc <= 1.0) {
+    return 220 - 220 * Math.min(1.0, Math.max(0, (dd - 0.05)) / 0.1);
+  }
+  return (245 + (360 - 245) * Math.min(1.0, Math.max(0, (dd - 0.05)) / 0.15)) % 360;
+}
+
+function circUpdateBucket(buckets, x, y) {
+  const distance = Math.hypot(x, y);
+  if (distance < 0.1) return; // ignore noise near rest
+  const angle = Math.atan2(y, x);
+  const idx = ((Math.round(angle * CIRC_BUCKETS / (2 * Math.PI))) + CIRC_BUCKETS) % CIRC_BUCKETS;
+  if (distance > buckets[idx]) buckets[idx] = distance;
+}
+
+function circOnSample(s) {
+  if (!circ.running) return;
+  circUpdateBucket(circ.dataL, s.lx, s.ly);
+  circUpdateBucket(circ.dataR, s.rx, s.ry);
+  circ.samplesL++;
+  circ.samplesR++;
+  circ.lastL = { x: s.lx, y: s.ly };
+  circ.lastR = { x: s.rx, y: s.ry };
+}
+
+function circTest() {
+  if (!device) {
+    log('Circularity test: no controller connected. Click Connect Controller first.', 'error');
+    return;
+  }
+  // Fresh 10-second sweep. Clicking Test always restarts; auto-stops on its own.
+  circ.dataL = new Array(CIRC_BUCKETS).fill(0);
+  circ.dataR = new Array(CIRC_BUCKETS).fill(0);
+  circ.samplesL = 0; circ.samplesR = 0;
+  circ.lastL = { x: 0, y: 0 }; circ.lastR = { x: 0, y: 0 };
+  circ.startTime = performance.now();
+  circ.running = true;
+  stickSubscribers.add(circOnSample);
+  $('circ-test').disabled = true;
+  $('circ-timer').classList.add('running');
+  $('circ-timer').textContent = (circ.durationMs / 1000).toFixed(1) + 's';
+  setCircResult('l', null);
+  setCircResult('r', null);
+  $('circ-samples-l').textContent = '0';
+  $('circ-samples-r').textContent = '0';
+  if (circ.rafId) cancelAnimationFrame(circ.rafId);
+  circRender();
+}
+
+function circAutoStop() {
+  circ.running = false;
+  stickSubscribers.delete(circOnSample);
+  if (circ.rafId) { cancelAnimationFrame(circ.rafId); circ.rafId = null; }
+  $('circ-test').disabled = false;
+  $('circ-timer').classList.remove('running');
+  $('circ-timer').textContent = 'DONE';
+  // Final score + a last paint so the frozen state matches the data.
+  setCircResult('l', circularityResult(circ.dataL));
+  setCircResult('r', circularityResult(circ.dataR));
+  drawStickCanvas('circ-canvas-l', null, circ.lastL.x, circ.lastL.y, { circularityData: circ.dataL });
+  drawStickCanvas('circ-canvas-r', null, circ.lastR.x, circ.lastR.y, { circularityData: circ.dataR });
+}
+
+function circRender() {
+  drawStickCanvas('circ-canvas-l', null, circ.lastL.x, circ.lastL.y, { circularityData: circ.dataL });
+  drawStickCanvas('circ-canvas-r', null, circ.lastR.x, circ.lastR.y, { circularityData: circ.dataR });
+
+  if (!circ.running) return;
+
+  $('circ-coords-l').textContent = `${circ.lastL.x.toFixed(3)}, ${circ.lastL.y.toFixed(3)}`;
+  $('circ-coords-r').textContent = `${circ.lastR.x.toFixed(3)}, ${circ.lastR.y.toFixed(3)}`;
+  $('circ-samples-l').textContent = circ.samplesL;
+  $('circ-samples-r').textContent = circ.samplesR;
+
+  const elapsed = performance.now() - circ.startTime;
+  const remaining = Math.max(0, (circ.durationMs - elapsed) / 1000);
+  $('circ-timer').textContent = remaining.toFixed(1) + 's';
+
+  // Recompute every 100ms so the Error % updates visibly as the sweep progresses.
+  if (!circRender._lastScore || elapsed - circRender._lastScore > 100) {
+    setCircResult('l', circularityResult(circ.dataL));
+    setCircResult('r', circularityResult(circ.dataR));
+    circRender._lastScore = elapsed;
+  }
+
+  if (elapsed >= circ.durationMs) {
+    circAutoStop();
+    return;
+  }
+  circ.rafId = requestAnimationFrame(circRender);
+}
+
+function circularityResult(data) {
+  // Show Error from the very first valid bucket — no waiting threshold.
+  // Buckets ≤0.2 (essentially center noise) are excluded from the average so they
+  // don't artificially inflate the number when the user has only swept part of the circle.
+  const valid = data.filter(v => v > 0.2);
+  const filled = data.filter(v => v > 0.3).length;
+  const coverage = (filled / CIRC_BUCKETS) * 100;
+  if (valid.length === 0) {
+    return { error: null, coverage: 0 };
+  }
+  const sumSq = valid.reduce((acc, v) => acc + (v - 1) ** 2, 0);
+  const error = Math.sqrt(sumSq / valid.length) * 100;
+  return { error, coverage };
+}
+
+function setCircResult(side, score) {
+  const card = $(`circ-result-${side}`);
+  const errEl = $(`circ-score-${side}`);
+  const covEl = $(`circ-coverage-${side}`);
+  if (!score) {
+    card.className = 'result-card idle';
+    errEl.textContent = '—';
+    errEl.className = 'result-value';
+    covEl.textContent = '—';
+    return;
+  }
+  covEl.textContent = score.coverage.toFixed(0) + '%';
+  if (score.error === null) {
+    errEl.textContent = '…';
+    errEl.className = 'result-value';
+    card.className = 'result-card idle';
+    return;
+  }
+  errEl.textContent = score.error.toFixed(1) + '%';
+  const errTier = score.error < 5 ? 'good' : score.error < 10 ? 'warn' : 'bad';
+  const covTier = score.coverage >= 90 ? 'good' : score.coverage >= 70 ? 'warn' : 'bad';
+  const order = { good: 2, warn: 1, bad: 0 };
+  const worst = order[errTier] <= order[covTier] ? errTier : covTier;
+  card.className = 'result-card ' + worst;
+  errEl.className = 'result-value score-' + errTier;
+}
+
+$('circ-test').addEventListener('click', circTest);
+circRender._lastScore = 0;
+drawStickCanvas('circ-canvas-l', null, 0, 0);
+drawStickCanvas('circ-canvas-r', null, 0, 0);
+
+// =============================================================
+// HARDWARE RECENTER — writes new stick center to controller NVS
+// Sequence is the public DualSense calibration protocol:
+//   0x80 [3,2,101,50,64,12]  → unlock NVS
+//   0x82 [1,1,1]             → begin center calibration
+//   0x82 [3,1,1]             → sample current rest position
+//   0x82 [2,1,1]             → end (commit) center calibration
+//   0x80 [3,1]               → lock NVS
+// =============================================================
+const recenterBtn = $('recenter-btn');
+const recenterStatus = $('recenter-status');
+
+function recenterAvailable() {
+  // Sony VID only — any non-Sony pad will silently no-op or behave unpredictably.
+  return !!(device && device.opened && device.vendorId === 0x054C);
+}
+
+// (Sony-feature button enablement consolidated into updateSonyButtons(), defined below.)
+
+function bufToHex(buf) {
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+    .join(' ');
+}
+
+// CRITICAL: DualSense feature reports are fixed-length. A short write is silently
+// dropped by the controller, so every command must be zero-padded out to the report's
+// declared reportCount (this mirrors dualshock-tools' alloc_req). Without it the NVS
+// unlock no-ops and every calibration step downstream fails.
+function sonyPad(reportId, bytes) {
+  const fr = (device.collections[0] && device.collections[0].featureReports) || [];
+  const match = fr.find(e => e.reportId === reportId);
+  const item = match && match.items && match.items[0];
+  const maxLen = (item && item.reportCount) || bytes.length;
+  const out = new Uint8Array(maxLen);
+  out.set(bytes.slice(0, Math.min(bytes.length, maxLen)));
+  return out;
+}
+
+// Mirrors dualshock-tools' verified flow: every send is paired with a receive
+// against a known magic value. If a step doesn't ack correctly, abort BEFORE
+// writing to flash so the controller is never left half-calibrated.
+async function recenterStep(label, sendId, sendBytes, recvId, expectMagic) {
+  log(`Recenter [${label}]: → ${sendId.toString(16).toUpperCase()} ${bufToHex(sendBytes)}`, 'info');
+  await device.sendFeatureReport(sendId, sonyPad(sendId, sendBytes));
+  const resp = await device.receiveFeatureReport(recvId);
+  const respHex = bufToHex(resp.buffer.slice(0, Math.min(8, resp.buffer.byteLength)));
+  log(`Recenter [${label}]: ← ${recvId.toString(16).toUpperCase()} ${respHex}`, '');
+  if (expectMagic !== null) {
+    const actual = resp.getUint32(0, false); // big-endian, matches dualshock-tools
+    if (actual !== expectMagic) {
+      throw new Error(
+        `${label} ack mismatch — expected 0x${expectMagic.toString(16).toUpperCase()}, ` +
+        `got 0x${actual.toString(16).toUpperCase()}`
+      );
+    }
+  }
+  return resp;
+}
+
+async function recenterSticks() {
+  if (!recenterAvailable()) {
+    log('Recenter aborted: not a Sony-protocol pad.', 'error');
+    return;
+  }
+  const ok = confirm(
+    'HARDWARE RECENTER\n\n' +
+    'This writes the current stick reading to the controller\'s permanent flash memory.\n\n' +
+    'BOTH sticks must be at rest (hands off) RIGHT NOW.\n\n' +
+    'Continue?'
+  );
+  if (!ok) {
+    log('Recenter cancelled by user.', 'info');
+    return;
+  }
+
+  recenterBtn.disabled = true;
+  recenterStatus.textContent = 'WRITING…';
+  recenterStatus.classList.add('running');
+
+  try {
+    // 1. Unlock NVS. dualshock-tools reads the response but doesn't verify content
+    //    — so we pass expectMagic=null. A receive error here means unlock failed.
+    await recenterStep('1/5 unlock', 0x80, [3, 2, 101, 50, 64, 12], 0x81, null);
+
+    // 2-4. Calibrate begin → sample → commit. The 0x83 ack reports the stage we're in;
+    //      first three bytes stay 0x830101, last byte: 01 for begin/sample, 02 for committed.
+    await recenterStep('2/5 begin',   0x82, [1, 1, 1], 0x83, 0x83010101);
+    await recenterStep('3/5 sample',  0x82, [3, 1, 1], 0x83, 0x83010101);
+    await recenterStep('4/5 commit',  0x82, [2, 1, 1], 0x83, 0x83010102);
+
+    // 5. Lock NVS. Same as unlock — response read confirms the lock went through.
+    await recenterStep('5/5 lock',    0x80, [3, 1], 0x81, null);
+
+    log('Recenter complete. New center saved to controller flash.', 'success');
+    recenterStatus.textContent = 'DONE';
+  } catch (err) {
+    log('Recenter failed: ' + err.message, 'error');
+    recenterStatus.textContent = 'FAILED';
+  } finally {
+    recenterStatus.classList.remove('running');
+    updateSonyButtons();
+  }
+}
+
+recenterBtn.addEventListener('click', recenterSticks);
+
+// =============================================================
+// DUALSENSE CONTROLLER INFO — read-only feature reports
+//   0x20            → 64-byte firmware / hardware info block
+//   0x80 [base,num] → 0x81 system-info string (serial, MCU id, …)
+//   0x80 [3,3]      → 0x81 NVS (calibration lock) status
+//   0x80 [9,2]      → 0x81 Bluetooth MAC
+// =============================================================
+const ds5InfoBtn = $('ds5-info-btn');
+const ds5InfoStatus = $('ds5-info-status');
+const ds5InfoGrid = $('ds5-info-grid');
+
+const DS5_COLOR_MAP = {
+  '00':'White','01':'Midnight Black','02':'Cosmic Red','03':'Nova Pink',
+  '04':'Galactic Purple','05':'Starlight Blue','06':'Grey Camouflage',
+  '07':'Volcanic Red','08':'Sterling Silver','09':'Cobalt Blue',
+  '10':'Chroma Teal','11':'Chroma Indigo','12':'Chroma Pearl','30':'30th Anniversary',
+};
+
+function ds5BoardModel(hwinfo) {
+  const a = (hwinfo >> 8) & 0xff;
+  if (a === 0x03) return 'BDM-010';
+  if (a === 0x04) return 'BDM-020';
+  if (a === 0x05) return 'BDM-030';
+  if (a === 0x06) return 'BDM-040';
+  if (a === 0x07 || a === 0x08) return 'BDM-050';
+  if (a === 0x11) return 'BDM-060M';
+  if (a === 0x13) return 'BDM-060X';
+  return 'Unknown (0x' + a.toString(16).toUpperCase() + ')';
+}
+
+// DataView byte readers that respect byteOffset (WebHID DataViews aren't always offset 0).
+function dvBytes(dv, off, len) {
+  const out = new Uint8Array(len);
+  for (let i = 0; i < len; i++) out[i] = dv.getUint8(off + i);
+  return out;
+}
+function dvAscii(dv, off, len) {
+  return new TextDecoder().decode(dvBytes(dv, off, len)).replace(/\0[\s\S]*$/, '').trim();
+}
+
+// 0x80 [base,num] → 0x81 [reportId, base, num, 2, ...payload]
+async function ds5SystemInfo(base, num, length, decode = true) {
+  await device.sendFeatureReport(0x80, sonyPad(0x80, [base, num]));
+  const r = await device.receiveFeatureReport(0x81);
+  if (r.getUint8(1) !== base || r.getUint8(2) !== num || r.getUint8(3) !== 2) return null;
+  if (decode) return dvAscii(r, 4, length);
+  return Array.from(dvBytes(r, 4, length)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('');
+}
+
+async function ds5NvStatus() {
+  await device.sendFeatureReport(0x80, sonyPad(0x80, [3, 3]));
+  const r = await device.receiveFeatureReport(0x81);
+  const ret = r.getUint32(1, false);
+  if (ret === 0x15010100) return 'Pending reboot';
+  if (ret === 0x03030201) return 'Locked (temporary)';
+  if (ret === 0x03030200) return 'Unlocked';
+  return 'Unknown (0x' + ret.toString(16).toUpperCase() + ')';
+}
+
+async function ds5BdAddr() {
+  await device.sendFeatureReport(0x80, sonyPad(0x80, [9, 2]));
+  const r = await device.receiveFeatureReport(0x81);
+  const mac = [];
+  for (let i = 5; i >= 0; i--) mac.push(r.getUint8(4 + i).toString(16).padStart(2, '0').toUpperCase());
+  return mac.join(':');
+}
+
+async function readDs5Info() {
+  if (!recenterAvailable()) { log('Controller info: not a Sony pad.', 'error'); return; }
+  ds5InfoBtn.disabled = true;
+  ds5InfoStatus.textContent = 'READING…';
+  ds5InfoStatus.classList.add('running');
+  try {
+    const info = await device.receiveFeatureReport(0x20);
+    if (info.getUint8(0) !== 0x20) throw new Error('unexpected info report (0x' + info.getUint8(0).toString(16) + ')');
+    const buildDate = dvAscii(info, 1, 11);
+    const buildTime = dvAscii(info, 12, 8);
+    const hwinfo = info.getUint32(24, true);
+    const fwversion = info.getUint32(28, true);
+    const serial = await ds5SystemInfo(1, 19, 17);
+    const mcu = await ds5SystemInfo(1, 9, 9, false);
+    const mac = await ds5BdAddr();
+    const nv = await ds5NvStatus();
+
+    const color = serial ? (DS5_COLOR_MAP[serial.slice(4, 6)] || 'Unknown') : '—';
+    const fwHex = '0x' + (fwversion >>> 0).toString(16).padStart(8, '0').toUpperCase();
+    const nvCls = nv.startsWith('Unlocked') ? 'good' : nv.startsWith('Locked') ? 'warn' : '';
+    const row = (k, v, cls = '') =>
+      `<div class="kv-key">${k}</div><div class="kv-val ${cls}">${escapeHtml(String(v))}</div>`;
+
+    ds5InfoGrid.innerHTML =
+      row('Board Model', ds5BoardModel(hwinfo), 'accent') +
+      row('FW Build', (buildDate + ' ' + buildTime).trim() || '—') +
+      row('FW Version', fwHex) +
+      row('Serial', serial || '—') +
+      row('Color', color) +
+      row('MCU Unique ID', mcu || '—') +
+      row('Bluetooth MAC', mac) +
+      row('Calibration', nv, nvCls);
+
+    log('Controller info read OK.', 'success');
+    ds5InfoStatus.textContent = 'DONE';
+  } catch (err) {
+    log('Controller info failed: ' + err.message, 'error');
+    ds5InfoStatus.textContent = 'FAILED';
+    ds5InfoGrid.innerHTML = `<div class="kv-key">Error</div><div class="kv-val bad">${escapeHtml(err.message)}</div>`;
+  } finally {
+    ds5InfoStatus.classList.remove('running');
+    ds5InfoBtn.disabled = !recenterAvailable();
+  }
+}
+
+// =============================================================
+// STICK RANGE CALIBRATION — companion to Recenter
+//   unlock → 0x82 [1,1,2] begin (ack 0x83010201)
+//   [user rotates both sticks fully]
+//   0x82 [2,1,2] end (ack 0x83010202) → lock
+// Reuses recenterStep() for send+receive+verify.
+// =============================================================
+const rangeStartBtn = $('range-start-btn');
+const rangeFinishBtn = $('range-finish-btn');
+const rangeStatus = $('range-status');
+let rangeCalActive = false;
+
+async function rangeCalStart() {
+  if (!recenterAvailable()) { log('Range cal: not a Sony pad.', 'error'); return; }
+  const ok = confirm(
+    'RANGE CALIBRATION\n\n' +
+    'After you click OK, slowly rotate BOTH sticks around their full outer edge a few times.\n\n' +
+    'Then click "Finish & Save".\n\n' +
+    'This writes to permanent flash. Continue?'
+  );
+  if (!ok) { log('Range calibration cancelled.', 'info'); return; }
+
+  rangeStartBtn.disabled = true;
+  rangeStatus.textContent = 'STARTING…';
+  rangeStatus.classList.add('running');
+  try {
+    await recenterStep('range unlock', 0x80, [3, 2, 101, 50, 64, 12], 0x81, null);
+    await recenterStep('range begin',  0x82, [1, 1, 2], 0x83, 0x83010201);
+    rangeCalActive = true;
+    rangeFinishBtn.disabled = false;
+    rangeStatus.textContent = 'ROTATE STICKS…';
+    log('Range calibration started — rotate both sticks fully, then click Finish & Save.', 'success');
+  } catch (err) {
+    log('Range cal start failed: ' + err.message, 'error');
+    rangeStatus.textContent = 'FAILED';
+    rangeStatus.classList.remove('running');
+    updateSonyButtons();
+  }
+}
+
+async function rangeCalFinish() {
+  if (!rangeCalActive) return;
+  rangeFinishBtn.disabled = true;
+  rangeStatus.textContent = 'SAVING…';
+  try {
+    await recenterStep('range end',  0x82, [2, 1, 2], 0x83, 0x83010202);
+    await recenterStep('range lock', 0x80, [3, 1], 0x81, null);
+    log('Range calibration complete. Saved to controller flash.', 'success');
+    rangeStatus.textContent = 'DONE';
+  } catch (err) {
+    log('Range cal finish failed: ' + err.message, 'error');
+    rangeStatus.textContent = 'FAILED';
+  } finally {
+    rangeCalActive = false;
+    rangeStatus.classList.remove('running');
+    updateSonyButtons();
+  }
+}
+
+// Shared enable/disable for every Sony-gated button (VID 0x054C required).
+function updateSonyButtons() {
+  const avail = recenterAvailable();
+  recenterBtn.disabled = !avail;
+  recenterBtn.title = avail
+    ? 'Permanently set the current rest position as the new stick center.'
+    : 'Requires a connected Sony DualSense / DualSense Edge.';
+  ds5InfoBtn.disabled = !avail;
+  rangeStartBtn.disabled = !avail || rangeCalActive;
+  rangeFinishBtn.disabled = !avail || !rangeCalActive;
+  document.querySelectorAll('.ds5-output-ctrl').forEach(el => { el.disabled = !avail; });
+}
+
+ds5InfoBtn.addEventListener('click', readDs5Info);
+rangeStartBtn.addEventListener('click', rangeCalStart);
+rangeFinishBtn.addEventListener('click', rangeCalFinish);
+updateSonyButtons();
+
+// =============================================================
+// DS5 LIVE EXTRAS — battery, trigger travel, button chatter
+// (read-only; parsed from the USB input report 0x01 every packet)
+// =============================================================
+const DS5_BUTTONS = [
+  { name: 'Triangle', byte: 7, mask: 0x80 },
+  { name: 'Circle',   byte: 7, mask: 0x40 },
+  { name: 'Cross',    byte: 7, mask: 0x20 },
+  { name: 'Square',   byte: 7, mask: 0x10 },
+  { name: 'L1', byte: 8, mask: 0x01 },
+  { name: 'R1', byte: 8, mask: 0x02 },
+  { name: 'L2', byte: 8, mask: 0x04 },
+  { name: 'R2', byte: 8, mask: 0x08 },
+  { name: 'Create',  byte: 8, mask: 0x10 },
+  { name: 'Options', byte: 8, mask: 0x20 },
+  { name: 'L3', byte: 8, mask: 0x40 },
+  { name: 'R3', byte: 8, mask: 0x80 },
+  { name: 'PS',       byte: 9, mask: 0x01 },
+  { name: 'Touchpad', byte: 9, mask: 0x02 },
+  { name: 'Mute',     byte: 9, mask: 0x04 },
+];
+const DS5_BTN_ORDER = [...DS5_BUTTONS.map(b => b.name), 'D-Up', 'D-Right', 'D-Down', 'D-Left'];
+
+const ds5Extras = {
+  battPct: null, battStatus: '—',
+  l2: 0, r2: 0, l2Hist: [], r2Hist: [],
+  btnState: {}, btnCount: {}, btnChatter: {}, btnLastRelease: {},
+};
+
+function processDs5Extras(data, now) {
+  // Battery — byte 52: low nibble = charge level (×10+5), high nibble = status.
+  if (data.length > 52) {
+    const bat = data[52];
+    ds5Extras.battPct = Math.min((bat & 0x0F) * 10 + 5, 100);
+    const status = bat >> 4;
+    ds5Extras.battStatus =
+      status === 0 ? 'On battery' :
+      status === 1 ? 'Charging'   :
+      status === 2 ? 'Full'       : 'Low / error';
+  }
+
+  // Trigger travel — bytes 4 (L2) and 5 (R2), 0–255.
+  ds5Extras.l2 = data[4];
+  ds5Extras.r2 = data[5];
+  ds5Extras.l2Hist.push(data[4]); if (ds5Extras.l2Hist.length > 60) ds5Extras.l2Hist.shift();
+  ds5Extras.r2Hist.push(data[5]); if (ds5Extras.r2Hist.length > 60) ds5Extras.r2Hist.shift();
+
+  // Buttons + dpad — edge-detect every report. Re-press within 40ms of release = chatter.
+  const states = DS5_BUTTONS.map(b => [b.name, !!(data[b.byte] & b.mask)]);
+  const hat = data[7] & 0x0F;
+  states.push(['D-Up',    [7, 0, 1].includes(hat)]);
+  states.push(['D-Right', [1, 2, 3].includes(hat)]);
+  states.push(['D-Down',  [3, 4, 5].includes(hat)]);
+  states.push(['D-Left',  [5, 6, 7].includes(hat)]);
+
+  for (const [name, pressed] of states) {
+    const was = ds5Extras.btnState[name] || false;
+    if (pressed && !was) {
+      ds5Extras.btnCount[name] = (ds5Extras.btnCount[name] || 0) + 1;
+      const lastRel = ds5Extras.btnLastRelease[name];
+      if (lastRel !== undefined && (now - lastRel) < 40) ds5Extras.btnChatter[name] = true;
+    } else if (!pressed && was) {
+      ds5Extras.btnLastRelease[name] = now;
+    }
+    ds5Extras.btnState[name] = pressed;
+  }
+}
+
+function renderDs5Extras() {
+  // Battery
+  $('batt-pct').textContent = ds5Extras.battPct ?? '—';
+  $('batt-status').textContent = ds5Extras.battStatus;
+  const pct = ds5Extras.battPct || 0;
+  const bf = $('batt-fill');
+  bf.style.width = pct + '%';
+  bf.style.background = pct > 40 ? 'var(--accent-good)' : pct > 15 ? 'var(--accent-warm)' : 'var(--accent-bad)';
+
+  // Triggers
+  $('l2-val').textContent = ds5Extras.l2;
+  $('r2-val').textContent = ds5Extras.r2;
+  $('l2-fill').style.width = (ds5Extras.l2 / 255 * 100) + '%';
+  $('r2-fill').style.width = (ds5Extras.r2 / 255 * 100) + '%';
+  drawSpark('spark-l2', ds5Extras.l2Hist, '#00ff88');
+  drawSpark('spark-r2', ds5Extras.r2Hist, '#ffb800');
+
+  // Buttons
+  $('button-test-grid').innerHTML = DS5_BTN_ORDER.map(name => {
+    const held = ds5Extras.btnState[name];
+    const count = ds5Extras.btnCount[name] || 0;
+    const chatter = ds5Extras.btnChatter[name];
+    const valStyle = chatter ? ' style="color:var(--accent-bad)"' : '';
+    return `<div class="field-row${held ? ' active' : ''}"><span class="field-name">${name}</span>` +
+           `<span class="field-val"${valStyle}>${count}${chatter ? ' ⚠' : ''}</span></div>`;
+  }).join('');
+}
+
+$('btn-test-reset').addEventListener('click', () => {
+  ds5Extras.btnCount = {}; ds5Extras.btnChatter = {}; ds5Extras.btnLastRelease = {};
+  renderDs5Extras();
+});
+renderDs5Extras();
+
+// =============================================================
+// DS5 OUTPUT CONTROLS — lightbar / player LEDs / mute LED / adaptive triggers
+// Sent via the output report 0x02 (47-byte struct, mirrors DS5OutputStruct).
+// Each call sets ONLY its valid-flag bits, so the controller leaves every other
+// subsystem untouched — no need to maintain a global output state.
+//   byte 0   = validFlag0   (0x01 R-rumble, 0x02 L-rumble, 0x04 L-trigger, 0x08 R-trigger)
+//   byte 1   = validFlag1   (0x01 mute LED, 0x04 lightbar, 0x10 player LEDs)
+//   byte 8   = mute LED state          byte 43 = player-LED pattern
+//   byte 10-13 = R2 trigger fx         byte 21-24 = L2 trigger fx
+//   byte 44-46 = lightbar R,G,B
+// =============================================================
+function ds5Output(setup) {
+  const buf = new Uint8Array(47);
+  setup(new DataView(buf.buffer));
+  return device.sendReport(0x02, buf);
+}
+
+function ds5SetLightbar(r, g, b) {
+  return ds5Output(dv => {
+    dv.setUint8(1, 0x04);           // validFlag1 = LIGHTBAR_COLOR
+    dv.setUint8(44, r); dv.setUint8(45, g); dv.setUint8(46, b);
+  });
+}
+function ds5SetPlayerLeds(pattern) {
+  return ds5Output(dv => {
+    dv.setUint8(1, 0x10);           // validFlag1 = PLAYER_INDICATOR
+    dv.setUint8(43, pattern & 0x1F);
+  });
+}
+function ds5SetMuteLed(state) {
+  return ds5Output(dv => {
+    dv.setUint8(1, 0x01);           // validFlag1 = MUTE_LED
+    dv.setUint8(8, state & 0x03);   // 0 off · 1 solid · 2 pulse
+  });
+}
+// Param triples are the simplified-effect form (small 0–8 ranges). These are a
+// reasonable starting point; if a mode feels wrong on real hardware we tune here.
+function ds5TriggerParams(mode, intensity) {
+  const f = Math.round(intensity / 255 * 8); // 0–8
+  if (mode === 0x01) return [0, f, 0];        // resistance: constant force across pull
+  if (mode === 0x02) return [2, 7, f];        // weapon: resist between zones 2..7
+  if (mode === 0x06) return [Math.max(1, f), 0, f]; // auto / vibration
+  return [0, 0, 0];                           // off
+}
+function ds5SetTriggers(mode, intensity) {
+  const [p0, p1, p2] = ds5TriggerParams(mode, intensity);
+  return ds5Output(dv => {
+    dv.setUint8(0, 0x0C);           // validFlag0 = LEFT_TRIGGER | RIGHT_TRIGGER
+    dv.setUint8(10, mode); dv.setUint8(11, p0); dv.setUint8(12, p1); dv.setUint8(13, p2); // R2
+    dv.setUint8(21, mode); dv.setUint8(22, p0); dv.setUint8(23, p1); dv.setUint8(24, p2); // L2
+  });
+}
+
+const triggerFx = { mode: 0, intensity: 200 };
+
+function safeOutput(label, promise) {
+  Promise.resolve(promise).catch(err => log(`${label} failed: ${err.message}`, 'error'));
+}
+
+$('lightbar-color').addEventListener('input', (e) => {
+  if (!recenterAvailable()) return;
+  const hex = e.target.value;
+  safeOutput('Lightbar', ds5SetLightbar(
+    parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)
+  ));
+});
+document.querySelectorAll('.player-led-btn').forEach(btn =>
+  btn.addEventListener('click', () => {
+    if (!recenterAvailable()) return;
+    safeOutput('Player LEDs', ds5SetPlayerLeds(parseInt(btn.dataset.pattern, 10)));
+  })
+);
+document.querySelectorAll('.mute-led-btn').forEach(btn =>
+  btn.addEventListener('click', () => {
+    if (!recenterAvailable()) return;
+    safeOutput('Mute LED', ds5SetMuteLed(parseInt(btn.dataset.state, 10)));
+  })
+);
+document.querySelectorAll('.trigger-fx-btn').forEach(btn =>
+  btn.addEventListener('click', () => {
+    if (!recenterAvailable()) return;
+    triggerFx.mode = parseInt(btn.dataset.mode, 10);
+    safeOutput('Adaptive triggers', ds5SetTriggers(triggerFx.mode, triggerFx.intensity));
+  })
+);
+$('trigger-intensity').addEventListener('input', (e) => {
+  triggerFx.intensity = parseInt(e.target.value, 10);
+  $('trigger-intensity-val').textContent = triggerFx.intensity;
+  if (recenterAvailable() && triggerFx.mode !== 0) {
+    safeOutput('Adaptive triggers', ds5SetTriggers(triggerFx.mode, triggerFx.intensity));
+  }
+});
+
+// ---------- DEADZONE / DRIFT ----------
+const dz = {
+  running: false, zoom: true, startTime: 0, durationMs: 5000, rafId: null,
+  pointsL: [], pointsR: [], lastL: { x: 0, y: 0 }, lastR: { x: 0, y: 0 },
+};
+
+function dzOnSample(s) {
+  if (!dz.running) return;
+  dz.pointsL.push({ x: s.lx, y: s.ly });
+  dz.pointsR.push({ x: s.rx, y: s.ry });
+  dz.lastL = { x: s.lx, y: s.ly };
+  dz.lastR = { x: s.rx, y: s.ry };
+}
+
+function dzStart() {
+  if (!device) {
+    log('Deadzone test: no controller connected. Click Connect Controller first.', 'error');
+    return;
+  }
+  dz.running = true;
+  dz.startTime = performance.now();
+  dz.pointsL = []; dz.pointsR = [];
+  stickSubscribers.add(dzOnSample);
+  $('dz-start').disabled = true;
+  $('dz-stop').disabled = false;
+  $('dz-reset').disabled = false;
+  $('dz-timer').classList.add('running');
+  setDzResult('l', null); setDzResult('r', null);
+  dzRender();
+}
+
+function dzStop() {
+  dz.running = false;
+  stickSubscribers.delete(dzOnSample);
+  $('dz-start').disabled = false;
+  $('dz-stop').disabled = true;
+  $('dz-timer').classList.remove('running');
+  // If nothing came through during the run, surface that explicitly instead of leaving the card blank.
+  if (dz.pointsL.length === 0) {
+    setDzNoData('l');
+    setDzNoData('r');
+    log('Deadzone test: no samples received. Controller may not be sending USB report 0x01.', 'error');
+    return;
+  }
+  setDzResult('l', dzStats(dz.pointsL));
+  setDzResult('r', dzStats(dz.pointsR));
+}
+
+function setDzNoData(side) {
+  $(`dz-drift-${side}`).textContent = '—';
+  $(`dz-noise-${side}`).textContent = '—';
+  $(`dz-status-${side}`).textContent = 'NO DATA';
+  $(`dz-status-${side}`).className = 'result-value score-bad';
+  $(`dz-result-${side}`).className = 'result-card bad';
+}
+
+function dzReset() {
+  dz.running = false;
+  stickSubscribers.delete(dzOnSample);
+  dz.pointsL = []; dz.pointsR = [];
+  $('dz-start').disabled = false;
+  $('dz-stop').disabled = true;
+  $('dz-reset').disabled = true;
+  $('dz-timer').textContent = '—';
+  $('dz-timer').classList.remove('running');
+  setDzResult('l', null); setDzResult('r', null);
+  drawStickCanvas('dz-canvas-l', [], 0, 0, { zoom: dz.zoom ? 10 : 1 });
+  drawStickCanvas('dz-canvas-r', [], 0, 0, { zoom: dz.zoom ? 10 : 1 });
+}
+
+function dzToggleZoom() {
+  dz.zoom = !dz.zoom;
+  $('dz-zoom-tag-l').classList.toggle('hidden', !dz.zoom);
+  $('dz-zoom-tag-r').classList.toggle('hidden', !dz.zoom);
+  // Redraw with new zoom even if not running.
+  if (!dz.running) {
+    const sL = dzStats(dz.pointsL);
+    const sR = dzStats(dz.pointsR);
+    drawStickCanvas('dz-canvas-l', dz.pointsL, dz.lastL.x, dz.lastL.y, {
+      zoom: dz.zoom ? 10 : 1, com: sL ? { x: sL.cx, y: sL.cy } : null,
+      dotColor: 'rgba(255,184,0,0.5)', comColor: '#ffb800',
+    });
+    drawStickCanvas('dz-canvas-r', dz.pointsR, dz.lastR.x, dz.lastR.y, {
+      zoom: dz.zoom ? 10 : 1, com: sR ? { x: sR.cx, y: sR.cy } : null,
+      dotColor: 'rgba(255,184,0,0.5)', comColor: '#ffb800',
+    });
+  }
+}
+
+function dzRender() {
+  const elapsed = performance.now() - dz.startTime;
+  const remaining = Math.max(0, (dz.durationMs - elapsed) / 1000);
+  $('dz-timer').textContent = remaining.toFixed(1) + 's';
+
+  const sL = dzStats(dz.pointsL);
+  const sR = dzStats(dz.pointsR);
+  const z = dz.zoom ? 10 : 1;
+  drawStickCanvas('dz-canvas-l', dz.pointsL, dz.lastL.x, dz.lastL.y, {
+    zoom: z, com: sL ? { x: sL.cx, y: sL.cy } : null,
+    dotColor: 'rgba(255,184,0,0.5)', comColor: '#ffb800',
+  });
+  drawStickCanvas('dz-canvas-r', dz.pointsR, dz.lastR.x, dz.lastR.y, {
+    zoom: z, com: sR ? { x: sR.cx, y: sR.cy } : null,
+    dotColor: 'rgba(255,184,0,0.5)', comColor: '#ffb800',
+  });
+  if (sL) setDzResult('l', sL);
+  if (sR) setDzResult('r', sR);
+
+  if (elapsed >= dz.durationMs) { dzStop(); return; }
+  dz.rafId = requestAnimationFrame(dzRender);
+}
+
+function dzStats(points) {
+  if (points.length < 5) return null;
+  const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+  const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+  const drift = Math.hypot(cx, cy);
+  let maxDev = 0;
+  for (const p of points) {
+    const d = Math.hypot(p.x - cx, p.y - cy);
+    if (d > maxDev) maxDev = d;
+  }
+  return { drift, noise: maxDev, cx, cy, samples: points.length };
+}
+
+function setDzResult(side, stats) {
+  const card = $(`dz-result-${side}`);
+  if (!stats) {
+    card.className = 'result-card idle';
+    $(`dz-drift-${side}`).textContent = '—';
+    $(`dz-noise-${side}`).textContent = '—';
+    $(`dz-status-${side}`).textContent = '—';
+    return;
+  }
+  $(`dz-drift-${side}`).textContent = stats.drift.toFixed(3);
+  $(`dz-noise-${side}`).textContent = '±' + stats.noise.toFixed(3);
+  let status, tier;
+  if (stats.drift < 0.02 && stats.noise < 0.02) { status = 'STABLE'; tier = 'good'; }
+  else if (stats.drift < 0.05 && stats.noise < 0.05) { status = 'OK'; tier = 'warn'; }
+  else { status = 'DRIFT'; tier = 'bad'; }
+  $(`dz-status-${side}`).textContent = status;
+  $(`dz-status-${side}`).className = 'result-value score-' + tier;
+  card.className = 'result-card ' + tier;
+}
+
+$('dz-start').addEventListener('click', dzStart);
+$('dz-stop').addEventListener('click', dzStop);
+$('dz-reset').addEventListener('click', dzReset);
+$('dz-zoom').addEventListener('click', dzToggleZoom);
+drawStickCanvas('dz-canvas-l', [], 0, 0, { zoom: dz.zoom ? 10 : 1 });
+drawStickCanvas('dz-canvas-r', [], 0, 0, { zoom: dz.zoom ? 10 : 1 });
+
+</script>
+</body>
+</html>
