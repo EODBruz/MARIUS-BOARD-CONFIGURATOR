@@ -1,27 +1,29 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator with Built-in USB Latency Analyzer V3.3
+    MARIUS Board Configurator V3.6
 
 .DESCRIPTION
-    All-in-one launcher for MARIUS tools including the built-in USB Latency Analyzer.
+    All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
     No additional files needed - everything is contained in this single script.
-    Features auto-updater, desktop shortcut installer, and embedded MBC icon.
+    Features desktop shortcut installer and embedded MBC icon.
 
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.5
-    
+    Version: 3.6
+
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
-    Script Version 3.5 Final
-    
+    Optimization Scripts: FR33THY
+    HID Telemetry Tool: @TheQuest818
+    Script Version 3.6
+
 .INSTALLATION
     Quick Install (One-Liner):
     iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
-    
+
 .SECURITY WARNING
     If you downloaded this script and get a security warning when running:
     - Press "R" to Run once (safe - this is a trusted script)
@@ -32,110 +34,11 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.5"
+$script:CurrentVersion = "3.6"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 $script:ReleasesApi    = "https://api.github.com/repos/EODBruz/MARIUS-BOARD-CONFIGURATOR/releases/latest"
-
-# ============================================================================
-# SILENT AUTO-UPDATER
-# ============================================================================
-function Write-UpdateLog {
-    param([string]$Message)
-    $logFile = "$script:InstallDir\update.log"
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $logFile -Value "[$timestamp] $Message" -ErrorAction SilentlyContinue
-}
-
-function Invoke-SilentUpdate {
-    try {
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("User-Agent", "MARIUS-Updater")
-
-        # Query GitHub releases API for latest release
-        $json        = $wc.DownloadString($script:ReleasesApi)
-        $tagLine     = (($json -split '"tag_name"\s*:\s*"')[1] -split '"')[0].TrimStart('vV')
-        $assetBlock  = ($json -split '"browser_download_url"\s*:\s*"')[1]
-        $downloadUrl = ($assetBlock -split '"')[0]
-
-        # If no .ps1 asset on the release, fall back to downloading from main branch
-        if (-not $downloadUrl -or $downloadUrl -notlike "*.ps1") {
-            Write-UpdateLog "No .ps1 asset found in latest release (tag: $tagLine) - falling back to main branch"
-            $downloadUrl = $script:ScriptUrl
-
-            # Read the version from the main branch script to do a proper version compare
-            try {
-                $mainScript = $wc.DownloadString($script:ScriptUrl)
-                $mainVerLine = ($mainScript -split "`n" | Where-Object { $_ -match '^\$script:CurrentVersion\s*=' } | Select-Object -First 1)
-                $tagLine = ($mainVerLine -replace '.*=\s*"([^"]+)".*', '$1').Trim()
-                Write-UpdateLog "Main branch reports version: $tagLine"
-            } catch {
-                Write-UpdateLog "Could not read version from main branch - skipping update"
-                return
-            }
-        }
-
-        # Compare versions - bail if already up to date
-        $isNewer = $false
-        try { $isNewer = ([version]$tagLine -gt [version]$script:CurrentVersion) } catch {}
-        if (-not $isNewer) {
-            Write-UpdateLog "Already on v$script:CurrentVersion - latest is v$tagLine - no update needed"
-            return
-        }
-
-        Write-UpdateLog "Update found: v$script:CurrentVersion -> v$tagLine - downloading from $downloadUrl"
-
-        # Download to temp file
-        $tempFile = "$env:TEMP\MARIUS_update_$tagLine.ps1"
-        $wc.DownloadFile($downloadUrl, $tempFile)
-
-        # Validate the download actually landed and is a real script
-        if (-not (Test-Path $tempFile)) {
-            Write-UpdateLog "FAILED - temp file missing after download"
-            return
-        }
-        $downloadedSize = (Get-Item $tempFile).Length
-        if ($downloadedSize -lt 10000) {
-            Write-UpdateLog "FAILED - downloaded file too small ($downloadedSize bytes) - aborting"
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            return
-        }
-
-        Write-UpdateLog "Download OK - $downloadedSize bytes - swapping files"
-
-        # Remove old script first, then copy (not move) so temp survives a failure
-        Remove-Item -Path $script:InstallPath -Force -ErrorAction SilentlyContinue
-        Copy-Item   -Path $tempFile -Destination $script:InstallPath -Force
-        Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
-
-        # Verify the new file is actually in place before relaunching
-        if (-not (Test-Path $script:InstallPath)) {
-            Write-UpdateLog "FAILED - new script not found at install path after copy"
-            return
-        }
-        $installedSize = (Get-Item $script:InstallPath).Length
-        if ($installedSize -lt 10000) {
-            Write-UpdateLog "FAILED - installed file too small ($installedSize bytes)"
-            return
-        }
-
-        Write-UpdateLog "SUCCESS - v$tagLine installed ($installedSize bytes) - relaunching"
-
-        Write-UpdateLog "Launching via schtasks"
-
-        # Use cmd /c start to launch fully detached from this process
-        $installPathEscaped = $script:InstallPath
-        $args = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$installPathEscaped`""
-        [System.Diagnostics.Process]::Start("cmd.exe", "/c start powershell.exe $args") | Out-Null
-        Start-Sleep -Milliseconds 3000
-        [System.Diagnostics.Process]::GetCurrentProcess().Kill()
-
-    } catch {
-        Write-UpdateLog "ERROR - $($_.Exception.Message)"
-        # No internet or API error - silently continue with current version
-    }
-}
 
 # ============================================================================
 # EMBEDDED MBC ICON (Yellow + Black, Base64 encoded ICO)
@@ -158,6 +61,78 @@ function Install-MbcIcon {
         return $null
     }
 }
+
+# ============================================================================
+# EMBEDDED CONTROLLER TELEMETRY HTML (Base64 encoded)
+# ============================================================================
+
+
+function Install-ControllerTelemetry {
+    <#
+    .SYNOPSIS
+        Downloads controller-telemetry.html from GitHub and opens it in the user's browser.
+    .NOTES
+        Fetches the live file from your GitHub Pages so no base64 is needed.
+    #>
+    try {
+        if (-not (Test-Path $script:InstallDir)) {
+            New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
+        }
+
+        $htmlPath = "$script:InstallDir\controller-telemetry.html"
+        $htmlUrl  = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/controller-telemetry.html"
+
+        # Always re-download so the user gets the latest version from GitHub
+        try {
+            $wc = New-Object System.Net.WebClient
+            $wc.Headers.Add("Cache-Control", "no-cache")
+            $wc.DownloadFile($htmlUrl, $htmlPath)
+        } catch {
+            # If download fails but a cached copy exists, fall back to it
+            if (-not (Test-Path $htmlPath)) {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "Could not download Controller Telemetry and no cached copy exists.`n$_",
+                    "Network Error",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Warning
+                )
+                return
+            }
+        }
+
+        # Open in default Chromium browser (WebHID requires Chrome/Edge/Opera)
+        $defaultBrowser = Get-DefaultBrowser
+        $browserPath    = Get-BrowserPath $defaultBrowser
+
+        if (-not $browserPath) {
+            foreach ($b in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                if ($b -ne $defaultBrowser) {
+                    $browserPath = Get-BrowserPath $b
+                    if ($browserPath) { break }
+                }
+            }
+        }
+
+        if ($browserPath) {
+            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+            $wW = 1400; $wH = 900
+            $l   = [Math]::Floor(($screen.Width  - $wW) / 2)
+            $t   = [Math]::Floor(($screen.Height - $wH) / 2)
+            Start-Process -FilePath $browserPath -ArgumentList "--app=`"file:///$($htmlPath.Replace('\','/').TrimStart('/'))`" --window-size=$wW,$wH --window-position=$l,$t"
+        } else {
+            Start-Process $htmlPath   # OS default open
+        }
+
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Could not open Controller Telemetry:`n$_",
+            "Error",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+    }
+}
+
 
 function Install-DesktopShortcut {
     param([string]$IconPath)
@@ -1329,7 +1304,7 @@ $script:form = New-Object System.Windows.Forms.Form
 $form = $script:form
 $form.Text = "MARIUS BOARD CONFIGURATOR"
 $form.Width = 854
-$form.Height = 770
+$form.Height = 834
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::Yellow
@@ -1356,7 +1331,7 @@ $form.Add_Shown({
 $mainPanel = New-Object System.Windows.Forms.Panel
 $script:mainPanel = $mainPanel
 $mainPanel.Location = New-Object System.Drawing.Point(2, 2)
-$mainPanel.Size = New-Object System.Drawing.Size(850, 766)
+$mainPanel.Size = New-Object System.Drawing.Size(850, 830)
 $mainPanel.BackColor = [System.Drawing.Color]::Black
 
 $headerPanel = New-Object System.Windows.Forms.Panel
@@ -1678,11 +1653,12 @@ function Show-ToolboxPage {
     # Build toolbox tiles only once; reuse on subsequent visits
     if ($script:toolboxTiles.Count -eq 0) {
         $tbItems = @(
-            @{Name="USB Latency Analyzer";                URL="USB_ANALYZER";   Desc="Count chips between your device and CPU. More chips = more latency"},
-            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";    Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
-            @{Name="Beta Portal";                         URL="BETA_PORTAL";    Desc="Enroll your board in the beta program and receive early firmware updates"},
-            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";  Desc="Optimise and Debloat Windows"},
-            @{Name="Back";                                URL="BACK";           Desc="Return to main menu"}
+            @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY"; Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
+            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+            @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
+            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
+            @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
+            @{Name="Back";                                URL="BACK";                  Desc="Return to main menu"}
         )
         $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
         foreach ($tbItem in $tbItems) {
@@ -1715,9 +1691,10 @@ function Show-ToolboxPage {
             }.GetNewClosure())
             $tbTile.Add_Click({
                 $tu=$this.Tag
-                if ($tu -eq "BACK")          { Show-MainPage; return }
-                if ($tu -eq "USB_ANALYZER")  { Show-UsbAnalyzer; return }
-                if ($tu -eq "GAMEBAR_FIX")   { Invoke-GameBarNotificationFix; return }
+                if ($tu -eq "BACK")                { Show-MainPage; return }
+                if ($tu -eq "USB_ANALYZER")        { Show-UsbAnalyzer; return }
+                if ($tu -eq "GAMEBAR_FIX")         { Invoke-GameBarNotificationFix; return }
+                if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "BETA_PORTAL") {
                     $targetUrl = "https://beta.mariusheier.com/"
                     $defaultBrowser = Get-DefaultBrowser
@@ -1739,6 +1716,10 @@ function Show-ToolboxPage {
                     return
                 }
                 if ($tu -eq "APP_INFO")      { Show-AppInfoDialog; return }
+                if ($tu -eq "DISCORD") {
+                    Start-Process "https://discord.gg/zDkNxusajK"
+                    return
+                }
                 if ($tu -eq "FR33THY_GUIDE") {
                     $targetUrl = "https://github.com/FR33THYFR33THY/Ultimate"
                     $defaultBrowser = Get-DefaultBrowser
@@ -1784,13 +1765,14 @@ function Show-MainPage {
 #  Marius Toolbox, Exit)
 # ============================================================================
 $websites = @(
-    @{Name="Setup Controller";         URL="https://devsetup.mariusheier.com/";                         Desc="Calibrate and configure your controller settings and polling rate settings"},
+    @{Name="Setup Controller";         URL="https://devsetup.mariusheier.com/";                          Desc="Calibrate and configure your controller settings and polling rate settings"},
     @{Name="Joystick Tester";          URL="https://hardwaretester.com/gamepad";                         Desc="Test your joystick inputs, buttons, and analog stick precision"},
     @{Name="Polling Rate Checker";     URL="https://tools.mariusheier.com/poll_checker.html";            Desc="Test and verify your controller's polling rate"},
     @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
+    @{Name="USB Latency Analyzer";     URL="USB_ANALYZER";                                                Desc="Count chips between your device and CPU. More chips = more latency"},
     @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
-    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="USB Latency Analyzer, Gamebar Notification Removal, FR33THY Ultimate Guide"},
+    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="HID Telemetry Diagnostic, Gamebar Notification Removal, FR33THY Ultimate Guide"},
     @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
     @{Name="App Information";          URL="APP_INFO";                                                   Desc="View information about this application"},
     @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
@@ -1891,6 +1873,7 @@ foreach ($site in $websites) {
             # Capture variables locally before running
             $releasesApi = $script:ReleasesApi
             $installPath = $script:InstallPath
+            $logFile     = "$script:InstallDir\update.log"
             try {
                 $wc = New-Object System.Net.WebClient
                 $wc.Headers.Add("User-Agent", "MARIUS-Updater")
@@ -1901,32 +1884,32 @@ foreach ($site in $websites) {
                 $downloadUrl = ($assetBlock -split '"')[0]
 
                 if (-not $downloadUrl -or $downloadUrl -notlike "*.ps1") {
-                    Write-UpdateLog "UPDATE TILE - No .ps1 asset in release v$tagLine - falling back to main branch"
+                    Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - No .ps1 asset in release v$tagLine - falling back to main branch" -ErrorAction SilentlyContinue
                     $downloadUrl = $script:ScriptUrl
 
                     try {
                         $mainScript = $wc.DownloadString($script:ScriptUrl)
                         $mainVerLine = ($mainScript -split "`n" | Where-Object { $_ -match '^\$script:CurrentVersion\s*=' } | Select-Object -First 1)
                         $tagLine = ($mainVerLine -replace '.*=\s*"([^"]+)".*', '$1').Trim()
-                        Write-UpdateLog "UPDATE TILE - Main branch reports version: $tagLine"
+                        Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - Main branch reports version: $tagLine" -ErrorAction SilentlyContinue
                     } catch {
-                        Write-UpdateLog "UPDATE TILE - Could not read version from main branch - skipping"
+                        Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - Could not read version from main branch - skipping" -ErrorAction SilentlyContinue
                         return
                     }
                 }
 
-                Write-UpdateLog "UPDATE TILE - Forcing install of v$tagLine from $downloadUrl"
+                Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - Forcing install of v$tagLine from $downloadUrl" -ErrorAction SilentlyContinue
 
                 $tempFile = "$env:TEMP\MARIUS_update_$tagLine.ps1"
                 $wc.DownloadFile($downloadUrl, $tempFile)
 
                 if (-not (Test-Path $tempFile)) {
-                    Write-UpdateLog "UPDATE TILE - FAILED temp file missing"
+                    Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - FAILED temp file missing" -ErrorAction SilentlyContinue
                     return
                 }
                 $dlSize = (Get-Item $tempFile).Length
                 if ($dlSize -lt 10000) {
-                    Write-UpdateLog "UPDATE TILE - FAILED file too small ($dlSize bytes)"
+                    Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - FAILED file too small ($dlSize bytes)" -ErrorAction SilentlyContinue
                     Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
                     return
                 }
@@ -1936,18 +1919,18 @@ foreach ($site in $websites) {
                 Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
 
                 if (-not (Test-Path $installPath)) {
-                    Write-UpdateLog "UPDATE TILE - FAILED new file not at install path"
+                    Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - FAILED new file not at install path" -ErrorAction SilentlyContinue
                     return
                 }
                 $instSize = (Get-Item $installPath).Length
-                Write-UpdateLog "UPDATE TILE - SUCCESS v$tagLine installed ($instSize bytes) - relaunching"
+                Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - SUCCESS v$tagLine installed ($instSize bytes) - relaunching" -ErrorAction SilentlyContinue
 
                 $args = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$installPath`""
                 [System.Diagnostics.Process]::Start("cmd.exe", "/c start powershell.exe $args") | Out-Null
                 Start-Sleep -Milliseconds 3000
                 [System.Diagnostics.Process]::GetCurrentProcess().Kill()
             } catch {
-                Write-UpdateLog "UPDATE TILE - ERROR $($_.Exception.Message)"
+                Add-Content -Path $logFile -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] UPDATE - ERROR $($_.Exception.Message)" -ErrorAction SilentlyContinue
             }
             return
         }
@@ -2022,7 +2005,7 @@ $script:rgbTimer.Start()
 
 # Add Credits Label (Red text at bottom)
 $versionLabel = New-Object System.Windows.Forms.Label
-$versionLabel.Location = New-Object System.Drawing.Point(5, 736)
+$versionLabel.Location = New-Object System.Drawing.Point(5, 800)
 $versionLabel.Size = New-Object System.Drawing.Size(120, 28)
 $versionLabel.Text = "v$script:CurrentVersion"
 $versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -2032,7 +2015,7 @@ $versionLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($versionLabel)
 
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(125, 736)
+$creditsLabel.Location = New-Object System.Drawing.Point(125, 800)
 $creditsLabel.Size = New-Object System.Drawing.Size(600, 28)
 $creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
