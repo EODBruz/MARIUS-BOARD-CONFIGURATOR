@@ -10,51 +10,16 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.5-yellow)
+![Version](https://img.shields.io/badge/version-3.6-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
 
-**All-in-one configurator for MARIUS controllers with built-in USB Latency Analyzer**
+**All-in-one configurator for MARIUS controllers — USB Latency Analyzer, HID Telemetry, GameBar fix and more**
 
 Official Application by [@EODBruz](https://github.com/EODBruz)
 
 </div>
-
----
-
-## ⚖️ License Agreement
-
-**Copyright (c) 2026 @EODBruz. All rights reserved.**
-
-This is an official application developed and maintained by @EODBruz. By using this software you agree to the following terms:
-
-**1. Grant of License**
-This software is provided free of charge for personal, non-commercial use. You are granted a non-exclusive, non-transferable licence to run this script on any Windows machine you own or control.
-
-**2. Restrictions**
-You may NOT:
-- Redistribute, resell, or sublicence this software or any modified version without prior written permission from @EODBruz
-- Remove or alter any copyright notices or credits contained within the script
-- Claim authorship or ownership of this software or any portion thereof
-- Use this software to develop a competing product without explicit consent
-
-**3. Modifications**
-You may modify this script for personal use only. Any publicly distributed fork or derivative must clearly credit @EODBruz and must not be presented as an official release.
-
-**4. Official Status**
-Only versions distributed via the official repository at [github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) are considered official. @EODBruz accepts no responsibility for modified or unofficial copies.
-
-**5. No Warranty**
-This software is provided "AS IS" without warranty of any kind. @EODBruz shall not be liable for any damages arising from the use or inability to use this software.
-
-**6. Termination**
-This licence is effective until terminated. Your rights under this licence will terminate automatically if you fail to comply with any of its terms.
-
-**7. Governing Law**
-This agreement shall be governed by applicable international software licensing standards. Any disputes shall be resolved in good faith between the parties involved.
-
-By continuing to use this software, you confirm that you have read, understood, and accept all terms of this agreement.
 
 ---
 
@@ -115,9 +80,10 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Joystick Tester** | Opens [hardwaretester.com/gamepad](https://hardwaretester.com/gamepad) — test inputs, buttons, and analog stick precision |
 | **Polling Rate Checker** | Opens the polling rate checker at tools.mariusheier.com |
 | **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
+| **USB Latency Analyzer** | Runs the built-in USB chip counter — count hops between your device and CPU |
 | **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
 | **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
-| **Marius Toolbox** | Opens the Toolbox submenu (USB Latency Analyzer, GameBar Removal, Beta Portal, FR33THY Guide) |
+| **Marius Toolbox** | Opens the Toolbox submenu (HID Telemetry, GameBar Removal, Beta Portal, FR33THY Guide, Discord) |
 | **Update Script** | Manually triggers a download and install of the latest version |
 | **App Information** | View app details, developer info, and the full license agreement |
 | **Exit** | Closes the application |
@@ -126,10 +92,11 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 
 | Tile | Action |
 |------|--------|
-| **USB Latency Analyzer** | Runs the built-in USB chip counter (no browser needed) |
+| **HID Telemetry Diagnostic Tool** | Advanced HID telemetry diagnostic tool by [@TheQuest818](https://github.com/TheQuest818) |
 | **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
 | **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
 | **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
+| **Join Marius Discord** | Opens the official Marius community Discord server |
 | **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
@@ -250,10 +217,15 @@ Launch the app using any method above. The GUI opens with a dark background and 
 
 ### USB Latency Analyzer
 
+1. Click **USB Latency Analyzer** from the main menu
+2. Click **SCAN USB DEVICES**
+3. Results appear colour-coded by chip count — green for direct CPU connection, orange for chipset, red for hub
+
+### HID Telemetry Diagnostic Tool
+
 1. Click **Marius Toolbox** from the main menu
-2. Click **USB Latency Analyzer**
-3. Click **SCAN USB DEVICES**
-4. Results appear colour-coded by chip count — green for direct CPU connection, orange for chipset, red for hub
+2. Click **HID Telemetry Diagnostic Tool**
+3. The tool will open in your default Chromium browser
 
 ### GameBar Notification Removal
 
@@ -335,17 +307,19 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 - **Issues:** [GitHub Issues](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
 - **Developer:** [@EODBruz on GitHub](https://github.com/EODBruz)
+- **Discord:** [Join the Marius Community](https://discord.gg/zDkNxusajK)
 
 ---
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.5). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.6). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
 - `logo.png` — MARIUS logo
 - `Title.png` — Title banner displayed inside the app
+- `controller-telemetry.html` — HID Telemetry Diagnostic Tool (served from GitHub, no local file needed)
 
 ---
 
@@ -378,8 +352,15 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 
 ## 📋 Changelog
 
+### v3.6
+- Added **HID Telemetry Diagnostic Tool** to Marius Toolbox — advanced diagnostic tool by [@TheQuest818](https://github.com/TheQuest818)
+- Moved **USB Latency Analyzer** back to the main menu for quicker access
+- Added **Join Marius Discord** tile to Marius Toolbox
+- Updated Marius Toolbox description to reflect new contents
+
 ### v3.5
 - General updates and improvements
+
 ### v3.4
 - Added **App Information** tile to main menu — displays app details, developer info, and full EULA
 - Moved **Beta Portal** from main menu into the **Marius Toolbox** submenu
@@ -404,8 +385,47 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 
 ## 🙏 Credits
 
-- **Developer:** [@EODBruz](https://github.com/EODBruz)
-- **Special Thanks:** [FR33THY](https://github.com/FR33THYFR33THY/Ultimate) — Files from Ultimate Guide
+| Role | Contributor |
+|------|-------------|
+| **App Creator** | [@mariusheier](https://x.com/mariusheier) — Creator of the MARIUS Board |
+| **Script Developer** | [@EODBruz](https://github.com/EODBruz) — PowerShell development and tooling |
+| **Optimization Scripts** | [FR33THY](https://github.com/FR33THYFR33THY/Ultimate) — Ultimate Windows optimization guide |
+| **HID Telemetry Tool** | [@TheQuest818](https://github.com/TheQuest818) — Advanced HID Telemetry Diagnostic Tool |
+
+---
+
+## ⚖️ License Agreement
+
+**Copyright (c) 2026 @EODBruz. All rights reserved.**
+
+This is an official application developed and maintained by @EODBruz. By using this software you agree to the following terms:
+
+**1. Grant of License**
+This software is provided free of charge for personal, non-commercial use. You are granted a non-exclusive, non-transferable licence to run this script on any Windows machine you own or control.
+
+**2. Restrictions**
+You may NOT:
+- Redistribute, resell, or sublicence this software or any modified version without prior written permission from @EODBruz
+- Remove or alter any copyright notices or credits contained within the script
+- Claim authorship or ownership of this software or any portion thereof
+- Use this software to develop a competing product without explicit consent
+
+**3. Modifications**
+You may modify this script for personal use only. Any publicly distributed fork or derivative must clearly credit @EODBruz and must not be presented as an official release.
+
+**4. Official Status**
+Only versions distributed via the official repository at [github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) are considered official. @EODBruz accepts no responsibility for modified or unofficial copies.
+
+**5. No Warranty**
+This software is provided "AS IS" without warranty of any kind. @EODBruz shall not be liable for any damages arising from the use or inability to use this software.
+
+**6. Termination**
+This licence is effective until terminated. Your rights under this licence will terminate automatically if you fail to comply with any of its terms.
+
+**7. Governing Law**
+This agreement shall be governed by applicable international software licensing standards. Any disputes shall be resolved in good faith between the parties involved.
+
+By continuing to use this software, you confirm that you have read, understood, and accept all terms of this agreement.
 
 ---
 
@@ -413,7 +433,7 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 
 **Optimize your USB ports. Minimize your latency. Maximize your performance.** 🎮⚡
 
-[⭐ Star this repo](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) | [🐛 Report Bug](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [✨ Request Feature](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues)
+[⭐ Star this repo](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR) | [🐛 Report Bug](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [✨ Request Feature](https://github.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/issues) | [💬 Discord](https://discord.gg/zDkNxusajK)
 
 ---
 
