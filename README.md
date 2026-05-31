@@ -40,7 +40,7 @@ iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/ma
 ```
 
 **What the uninstaller removes:**
-- `%APPDATA%\MARIUS` folder (script, icon, update log)
+- `%APPDATA%\MARIUS` folder (script and icon)
 - Desktop shortcut
 - Start Menu shortcut and folder
 - Any leftover temp update files in `%TEMP%`
@@ -105,9 +105,9 @@ All browser-based tiles open in a centered 1200×800 app window using your defau
 
 Accessible from the main menu. Displays application details including version, developer, platform, and repository. Also contains the full End User License Agreement (EULA). Close with the OK button.
 
-### 🔄 Auto-Updater
+### 🔄 Updater
 
-The updater runs silently every time the app launches. It queries the **GitHub Releases API** for the latest release tag, compares it to the currently installed version, and — if a newer version is available — downloads it, validates the file size (must be >10 KB), swaps the old script out, and relaunches automatically. All update activity is logged to `%APPDATA%\MARIUS\update.log`.
+Updates are triggered manually via the **Update Script** tile in the main menu. When clicked it queries the **GitHub Releases API** for the latest release, downloads it, validates the file size (must be >10 KB), swaps the old script out, and relaunches automatically.
 
 If no `.ps1` asset is attached to the GitHub release, the updater falls back to downloading from the `main` branch and reads the version number directly from the script source.
 
@@ -205,7 +205,7 @@ Created automatically on first run. The shortcut launches the installed script a
 
 ## 🔄 Updating
 
-Updates are fully automatic. The app checks the GitHub Releases API on every launch. If a new version is found you can also trigger a manual update at any time from the **Update Script** tile in the menu — it downloads the latest release, validates it, swaps it in, and relaunches.
+Click **Update Script** from the main menu to check for and install the latest version. The app downloads the latest release from GitHub, validates it, swaps it in, and relaunches automatically.
 
 ---
 
@@ -233,7 +233,7 @@ Click **Marius Toolbox** → **GameBar Notification Removal** to suppress the Wi
 
 ### Manual Update
 
-Click **Update Script** to force an immediate check and install of the latest version from GitHub. The app will relaunch automatically if a new version is installed.
+Click **Update Script** from the main menu to download and install the latest version from GitHub. The app will relaunch automatically once the update is complete.
 
 ### App Information
 
@@ -299,7 +299,7 @@ The script searches for Chromium browsers in the order listed under Browser Supp
 
 ### Update Not Appearing
 
-Check your internet connection. The updater queries the GitHub Releases API — if no `.ps1` asset is attached to the release it falls back to reading the version from the `main` branch directly. If you are on a pre-BUILD1 install the updater itself may be broken; run the uninstaller and reinstall cleanly using the one-liners above. Never use letters in version numbers.
+Check your internet connection. The updater queries the GitHub Releases API — if no `.ps1` asset is attached to the release it falls back to reading the version from the `main` branch directly. If updates are still failing, run the uninstaller and reinstall cleanly using the one-liners above. Never use letters in version numbers.
 
 ---
 
@@ -357,6 +357,7 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 - Moved **USB Latency Analyzer** back to the main menu for quicker access
 - Added **Join Marius Discord** tile to Marius Toolbox
 - Updated Marius Toolbox description to reflect new contents
+- **Removed silent auto-updater** — updates are now manual only via the **Update Script** button in the main menu
 
 ### v3.5
 - General updates and improvements
