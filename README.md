@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.6-yellow)
+![Version](https://img.shields.io/badge/version-3.7-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -92,11 +92,13 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 
 | Tile | Action |
 |------|--------|
-| **HID Telemetry Diagnostic Tool** | Advanced HID telemetry diagnostic tool by [@TheQuest818](https://github.com/TheQuest818) |
-| **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **Troubleshooting** | Common issues and solutions for MARIUS controllers — connection drops, overclock conflicts, button problems |
+| **DeepPoll** | Opens [tools.mariusheier.com/deeppoll](https://tools.mariusheier.com/deeppoll) — measures USB polling rate with microsecond precision using kernel-level ETW tracing |
 | **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
-| **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
+| **HID Telemetry Diagnostic Tool** | Advanced HID telemetry diagnostic tool by [@TheQuest818](https://github.com/TheQuest818) |
 | **Join Marius Discord** | Opens the official Marius community Discord server |
+| **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
+| **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
 | **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
@@ -120,6 +122,15 @@ On first run the script:
 4. Creates a **Start Menu shortcut** under Programs
 
 Shortcuts are only created once and are not recreated on subsequent runs unless missing.
+
+### 🎵 Background Music
+
+The app plays background music on launch. Music is **muted by default** at 38% volume on first run.
+
+- **Speaker icon** (bottom-right of main menu) — click to toggle mute/unmute
+- **Volume slider** — drag left/right to adjust volume live. Changes are saved to `Settings.ini` on mouse release
+- Settings are stored in `%APPDATA%\MARIUS\Settings.ini` and never overwritten by updates — your preferences are always preserved
+- The music file (`MMusic.mp3`) is downloaded once and cached in `%APPDATA%\MARIUS`
 
 ### 📊 USB Latency Analyzer V3
 
@@ -313,7 +324,7 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.6). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.7). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -351,6 +362,13 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 ---
 
 ## 📋 Changelog
+
+### v3.7
+- Added **Background Music** — plays automatically on launch (muted by default at 38% volume). Toggle and adjust with the speaker icon and volume slider in the bottom bar
+- Added **volume slider** to the main menu bottom bar — drag to set volume live, saves to `Settings.ini` without overwriting your custom settings
+- Added **Troubleshooting** to Marius Toolbox — in-app guide covering common controller issues (overclock conflicts, disconnects, connection failures, button bugs)
+- Added **DeepPoll** to Marius Toolbox — links to [tools.mariusheier.com/deeppoll](https://tools.mariusheier.com/deeppoll) for kernel-level ETW polling rate measurement. A native built-in polling rate tool is planned for a future version
+- Improved **credits** alignment in the main menu bottom bar
 
 ### v3.6
 - Added **HID Telemetry Diagnostic Tool** to Marius Toolbox — advanced diagnostic tool by [@TheQuest818](https://github.com/TheQuest818)
