@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.6
+    MARIUS Board Configurator V3.7
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.6
+    Version: 3.7
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.6
+    Script Version 3.7
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,11 +34,15 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.6"
+$script:CurrentVersion = "3.7"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
 $script:ReleasesApi    = "https://api.github.com/repos/EODBruz/MARIUS-BOARD-CONFIGURATOR/releases/latest"
+$script:SettingsPath   = "$script:InstallDir\Settings.ini"
+$script:MusicPath      = "$script:InstallDir\MMusic.mp3"
+$script:MusicUrl       = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MMusic.mp3"
+
 
 # ============================================================================
 # EMBEDDED MBC ICON (Yellow + Black, Base64 encoded ICO)
@@ -1282,6 +1286,134 @@ function Invoke-GameBarNotificationFix {
 }
 
 # ============================================================================
+# SETTINGS HELPERS (Settings.ini in %APPDATA%\MARIUS)
+# ============================================================================
+
+function Read-Settings {
+    $script:MusicEnabled = $false   # Muted by default
+    $script:MusicVolume  = 38       # 38% volume by default
+    try {
+        if (Test-Path $script:SettingsPath) {
+            Get-Content $script:SettingsPath | ForEach-Object {
+                if ($_ -match '^\s*MusicEnabled\s*=\s*(.+)') {
+                    $script:MusicEnabled = ($matches[1].Trim() -eq "True")
+                }
+                if ($_ -match '^\s*MusicVolume\s*=\s*(\d+)') {
+                    $v = [int]$matches[1]
+                    $script:MusicVolume = [Math]::Max(0, [Math]::Min(100, $v))
+                }
+            }
+        }
+    } catch {}
+}
+
+function Save-Settings {
+    try {
+        if (-not (Test-Path $script:InstallDir)) {
+            New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
+        }
+        $val = if ($script:MusicEnabled) { "True" } else { "False" }
+        $vol = if ($null -ne $script:MusicVolume) { $script:MusicVolume } else { 38 }
+
+        if (-not (Test-Path $script:SettingsPath)) {
+            # File doesn't exist yet — create it fresh with defaults + comments
+            $lines = @(
+                "MusicEnabled=$val",
+                "MusicVolume=$vol",
+                "",
+                "# MusicEnabled: True or False",
+                "# MusicVolume:  0 to 100"
+            )
+            Set-Content -Path $script:SettingsPath -Value $lines -Encoding UTF8
+        } else {
+            # File exists — surgically update only MusicEnabled and MusicVolume lines.
+            # All other content (comments, custom keys, whitespace) is preserved.
+            $raw = Get-Content $script:SettingsPath
+            $updatedEnabled = $false
+            $updatedVolume  = $false
+            $out = $raw | ForEach-Object {
+                if ($_ -match '^\s*MusicEnabled\s*=') { $updatedEnabled = $true; "MusicEnabled=$val" }
+                elseif ($_ -match '^\s*MusicVolume\s*=') { $updatedVolume = $true; "MusicVolume=$vol" }
+                else { $_ }
+            }
+            # Append any keys that were missing entirely
+            if (-not $updatedEnabled) { $out += "MusicEnabled=$val" }
+            if (-not $updatedVolume)  { $out += "MusicVolume=$vol"  }
+            Set-Content -Path $script:SettingsPath -Value $out -Encoding UTF8
+        }
+    } catch {}
+}
+
+function Open-Settings {
+    try {
+        if (-not (Test-Path $script:SettingsPath)) { Save-Settings }
+        Start-Process "notepad.exe" -ArgumentList "`"$script:SettingsPath`""
+    } catch {}
+}
+
+# ============================================================================
+# MUSIC via mciSendString (winmm.dll) - reliable MP3 looping
+# ============================================================================
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class MciAudio {
+    [DllImport("winmm.dll", CharSet = CharSet.Auto)]
+    public static extern int mciSendString(string command, string returnString, int returnLength, IntPtr hwndCallback);
+    [DllImport("winmm.dll")]
+    public static extern int waveOutSetVolume(IntPtr hwo, uint dwVolume);
+    public static void SendCommand(string cmd) {
+        mciSendString(cmd, null, 0, IntPtr.Zero);
+    }
+    public static void SetVolume(int percent) {
+        // percent 0-100, maps to 0-0xFFFF on each channel
+        uint vol = (uint)(percent * 0xFFFF / 100);
+        uint stereo = (vol & 0xFFFF) | ((vol & 0xFFFF) << 16);
+        waveOutSetVolume(IntPtr.Zero, stereo);
+    }
+}
+"@ -ErrorAction SilentlyContinue
+
+function Get-MusicFile {
+    try {
+        if (-not (Test-Path $script:MusicPath)) {
+            $wc = New-Object System.Net.WebClient
+            $wc.DownloadFile($script:MusicUrl, $script:MusicPath)
+        }
+    } catch {}
+}
+
+function Start-Music {
+    if (-not $script:MusicEnabled) { return }
+    try {
+        if (-not (Test-Path $script:MusicPath)) { return }
+        [MciAudio]::SendCommand("close MariusMusic")
+        [MciAudio]::SendCommand("open `"$($script:MusicPath)`" type mpegvideo alias MariusMusic")
+        $vol = if ($null -ne $script:MusicVolume) { $script:MusicVolume } else { 38 }
+        [MciAudio]::SetVolume($vol)
+        [MciAudio]::SendCommand("play MariusMusic repeat")
+    } catch {}
+}
+
+function Stop-Music {
+    try {
+        [MciAudio]::SendCommand("stop MariusMusic")
+        [MciAudio]::SendCommand("close MariusMusic")
+    } catch {}
+}
+
+function Toggle-Music {
+    $script:MusicEnabled = -not $script:MusicEnabled
+    Save-Settings
+    if ($script:MusicEnabled) {
+        Start-Music
+    } else {
+        Stop-Music
+    }
+}
+
+# ============================================================================
 # STARTUP: INSTALL, ICON, SHORTCUT, UPDATE CHECK
 # ============================================================================
 
@@ -1290,6 +1422,13 @@ Add-Type -AssemblyName System.Drawing
 
 # 1. Install script to %APPDATA%\MARIUS if needed
 Invoke-SelfInstall
+
+# 2. Read saved settings
+Read-Settings
+
+# 3. Download music file if not cached, then start playback
+Get-MusicFile
+Start-Music
 
 # 2. Extract MBC icon and create Desktop shortcut (first run only)
 $script:IconPath = Install-MbcIcon
@@ -1646,6 +1785,236 @@ understood, and accept all terms of this agreement.
     [void]$dlg.ShowDialog()
 }
 
+function Show-TroubleshootingDialog {
+    $W = 660; $H = 780
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text            = ""
+    $dlg.Width           = $W
+    $dlg.Height          = $H
+    $dlg.StartPosition   = "CenterScreen"
+    $dlg.FormBorderStyle = "None"
+    $dlg.BackColor       = [System.Drawing.Color]::Yellow
+    $dlg.TopMost         = $true
+
+    $script:tsDrag = $false; $script:tsDX = 0; $script:tsDY = 0
+
+    $inner = New-Object System.Windows.Forms.Panel
+    $inner.Location  = New-Object System.Drawing.Point(3, 3)
+    $inner.Size      = New-Object System.Drawing.Size(($W - 6), ($H - 6))
+    $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $dlg.Controls.Add($inner)
+
+    # RGB border timer
+    $tsRgbTimer = New-Object System.Windows.Forms.Timer
+    $tsRgbTimer.Interval = 40
+    $tsRgbTimer.Add_Tick({
+        $script:rgbHue = ($script:rgbHue + 2) % 360
+        $h = $script:rgbHue / 360.0; $i = [Math]::Floor($h * 6); $f = $h * 6 - $i; $q = 1 - $f; $t = $f
+        switch ($i % 6) {
+            0 { $r=255; $g=[int]($t*255); $b=0 }
+            1 { $r=[int]($q*255); $g=255; $b=0 }
+            2 { $r=0; $g=[int]($t*255); $b=255 }
+            3 { $r=0; $g=[int]($q*255); $b=255 }
+            4 { $r=[int]($t*255); $g=0; $b=255 }
+            5 { $r=255; $g=0; $b=[int]($q*255) }
+        }
+        $dlg.BackColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+    })
+    $tsRgbTimer.Start()
+    $dlg.Add_FormClosed({ $tsRgbTimer.Stop(); $tsRgbTimer.Dispose() })
+
+    # Title bar
+    $titleBar = New-Object System.Windows.Forms.Panel
+    $titleBar.Location  = New-Object System.Drawing.Point(0, 0)
+    $titleBar.Size      = New-Object System.Drawing.Size(($W - 6), 70)
+    $titleBar.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $inner.Controls.Add($titleBar)
+    $titleBar.Add_MouseDown({ $script:tsDrag=$true; $script:tsDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:tsDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $titleBar.Add_MouseMove({ if($script:tsDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:tsDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:tsDY } })
+    $titleBar.Add_MouseUp({ $script:tsDrag=$false })
+
+    $picTitle = New-Object System.Windows.Forms.PictureBox
+    $picTitle.Location  = New-Object System.Drawing.Point(0, 0)
+    $picTitle.Size      = New-Object System.Drawing.Size(($W - 50), 70)
+    $picTitle.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $picTitle.Add_Paint({
+        param($sender, $e); $g=$e.Graphics
+        $g.SmoothingMode=[System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+        $sf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $sb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(80,0,0,0))
+        $tf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $tb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $g.DrawString("TROUBLESHOOTING",$sf,$sb,22,17)
+        $g.DrawString("TROUBLESHOOTING",$tf,$tb,20,15)
+        $sf.Dispose();$sb.Dispose();$tf.Dispose();$tb.Dispose()
+    })
+    $picTitle.Add_MouseDown({ $script:tsDrag=$true; $script:tsDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:tsDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $picTitle.Add_MouseMove({ if($script:tsDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:tsDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:tsDY } })
+    $picTitle.Add_MouseUp({ $script:tsDrag=$false })
+    $titleBar.Controls.Add($picTitle)
+
+    # X button
+    $btnX = New-Object System.Windows.Forms.Button
+    $btnX.Location  = New-Object System.Drawing.Point(($W - 52), 18)
+    $btnX.Size      = New-Object System.Drawing.Size(32, 32)
+    $btnX.Text      = "X"
+    $btnX.FlatStyle = "Flat"
+    $btnX.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
+    $btnX.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnX.FlatAppearance.BorderSize = 0
+    $btnX.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnX.Add_Click({ $dlg.Close() })
+    $btnX.Add_MouseEnter({ $btnX.ForeColor = [System.Drawing.Color]::White })
+    $btnX.Add_MouseLeave({ $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140,140,140) })
+    $titleBar.Controls.Add($btnX)
+
+    # Divider
+    $div = New-Object System.Windows.Forms.Panel
+    $div.Location  = New-Object System.Drawing.Point(0, 70)
+    $div.Size      = New-Object System.Drawing.Size(($W - 6), 2)
+    $div.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $inner.Controls.Add($div)
+
+    # Badge
+    $badgePanel = New-Object System.Windows.Forms.Panel
+    $badgePanel.Location  = New-Object System.Drawing.Point(20, 82)
+    $badgePanel.Size      = New-Object System.Drawing.Size(($W - 46), 36)
+    $badgePanel.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 0)
+    $inner.Controls.Add($badgePanel)
+
+    $badgeLabel = New-Object System.Windows.Forms.Label
+    $badgeLabel.Location  = New-Object System.Drawing.Point(0, 0)
+    $badgeLabel.Size      = New-Object System.Drawing.Size(($W - 46), 36)
+    $badgeLabel.Text      = "  TROUBLESHOOTING GUIDE  |  Common Issues & Solutions"
+    $badgeLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $badgeLabel.ForeColor = [System.Drawing.Color]::Yellow
+    $badgeLabel.BackColor = [System.Drawing.Color]::Transparent
+    $badgeLabel.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($badgeLabel)
+
+    # Scrollable content box
+    $contentBox = New-Object System.Windows.Forms.RichTextBox
+    $contentBox.Location   = New-Object System.Drawing.Point(20, 130)
+    $contentBox.Size       = New-Object System.Drawing.Size(($W - 46), ($H - 220))
+    $contentBox.BackColor  = [System.Drawing.Color]::FromArgb(18, 18, 18)
+    $contentBox.ForeColor  = [System.Drawing.Color]::FromArgb(190, 190, 190)
+    $contentBox.Font       = New-Object System.Drawing.Font("Segoe UI", 9)
+    $contentBox.ReadOnly   = $true
+    $contentBox.BorderStyle = "None"
+    $contentBox.ScrollBars = "Vertical"
+
+    # Section helper: heading yellow, body gray
+    function Add-TsSection {
+        param($rtb, [string]$Heading, [string[]]$Lines)
+        $rtb.SelectionFont  = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+        $rtb.SelectionColor = [System.Drawing.Color]::Yellow
+        $rtb.AppendText("$Heading`n")
+        foreach ($ln in $Lines) {
+            $rtb.SelectionFont  = New-Object System.Drawing.Font("Segoe UI", 9)
+            $rtb.SelectionColor = [System.Drawing.Color]::FromArgb(190, 190, 190)
+            $rtb.AppendText("$ln`n")
+        }
+        $rtb.AppendText("`n")
+    }
+
+    Add-TsSection $contentBox "PREVIOUSLY OVERCLOCKED ANOTHER CONTROLLER?" @(
+        "Have you installed an overclock (HIDUSBF) for another controller on the",
+        "same USB port? (e.g. PS5 at 8000Hz, Xbox with HIDUSBF, any non-Marius",
+        "controller using HIDUSBF).",
+        "",
+        "If YES, the Marius board may have trouble connecting to Marius Tools",
+        "because HIDUSBF is forcing the USB polling rate for the previous controller.",
+        "",
+        "HOW TO REMOVE THE OVERCLOCK:",
+        "  1. Open HIDUSBF.",
+        "  2. Select your non-Marius controller.",
+        "  3. Untick Filter On Device.",
+        "  4. Right-click Install Service (or Uninstall Service if available).",
+        "  5. Click Uninstall Service.",
+        "  6. Restart your PC.",
+        "",
+        "Download HIDUSBF from the FR33THY GitHub if needed."
+    )
+
+    Add-TsSection $contentBox "MY MARIUS CONTROLLER KEEPS DISCONNECTING" @(
+        "USB-C cables have a limited lifespan. Frequent plugging and unplugging can",
+        "weaken the connection over time, especially during firmware updates or testing.",
+        "",
+        "THINGS TO CHECK:",
+        "  - Try a different USB-C cable.",
+        "  - Try a different USB port.",
+        "  - Avoid USB hubs where possible.",
+        "  - Keep a spare USB-C cable available for troubleshooting.",
+        "",
+        "Even if the cable is new, testing another cable is recommended."
+    )
+
+    Add-TsSection $contentBox "MY CONTROLLER IS NOT CONNECTING" @(
+        "This issue has largely been resolved through firmware updates.",
+        "Older firmware versions, particularly on some AMD systems, could cause",
+        "connection issues.",
+        "",
+        "RECOMMENDED SOLUTION:",
+        "  - Update to Firmware 1.22B or newer.",
+        "  - Install and use Marius XInput.",
+        "",
+        "These updates resolve the vast majority of connection-related problems."
+    )
+
+    Add-TsSection $contentBox "MY BUTTONS ARE NOT WORKING CORRECTLY" @(
+        "Button issues are typically caused by:",
+        "  - A bug in the controller manufacturer's firmware.",
+        "  - A bug in the Marius firmware.",
+        "  - Corrupted controller settings or configuration.",
+        "",
+        "TROUBLESHOOTING STEPS:",
+        "  1. Update to the latest Marius firmware.",
+        "  2. Restart the controller and reconnect it.",
+        "  3. Test the controller in a gamepad tester.",
+        "  4. Report the issue with details about:",
+        "       - Controller model",
+        "       - Firmware version",
+        "       - Which buttons are affected",
+        "       - Whether the issue occurs in all or specific games",
+        "",
+        "Providing this information helps identify and fix bugs much faster."
+    )
+
+    $inner.Controls.Add($contentBox)
+
+    # OK button with RGB border
+    $okBtnW = 220; $okBtnH = 46
+    $okX = [int](($W - 6 - $okBtnW - 4) / 2)
+    $okY = $H - 76
+
+    $rgbOkPanel = New-Object System.Windows.Forms.Panel
+    $rgbOkPanel.Location  = New-Object System.Drawing.Point($okX, $okY)
+    $rgbOkPanel.Size      = New-Object System.Drawing.Size(($okBtnW + 4), ($okBtnH + 4))
+    $rgbOkPanel.BackColor = [System.Drawing.Color]::Yellow
+    $inner.Controls.Add($rgbOkPanel)
+    $tsRgbTimer.Add_Tick({ $rgbOkPanel.BackColor = $dlg.BackColor })
+
+    $btnOk = New-Object System.Windows.Forms.Button
+    $btnOk.Location  = New-Object System.Drawing.Point(2, 2)
+    $btnOk.Size      = New-Object System.Drawing.Size($okBtnW, $okBtnH)
+    $btnOk.Text      = "OK"
+    $btnOk.FlatStyle = "Flat"
+    $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+    $btnOk.ForeColor = [System.Drawing.Color]::Yellow
+    $btnOk.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnOk.FlatAppearance.BorderSize = 0
+    $btnOk.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnOk.Add_Click({ $dlg.Close() })
+    $btnOk.Add_MouseEnter({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(40,40,12) })
+    $btnOk.Add_MouseLeave({ $btnOk.BackColor = [System.Drawing.Color]::FromArgb(20,20,20) })
+    $rgbOkPanel.Controls.Add($btnOk)
+
+    $dlg.Add_KeyDown({ param($s,$e); if($e.KeyCode -eq "Escape"){ $dlg.Close() } })
+    [void]$dlg.ShowDialog()
+}
+
 function Show-ToolboxPage {
     # Hide every main-menu tile
     foreach ($c in $script:mainTiles) { $c.Visible = $false }
@@ -1653,11 +2022,13 @@ function Show-ToolboxPage {
     # Build toolbox tiles only once; reuse on subsequent visits
     if ($script:toolboxTiles.Count -eq 0) {
         $tbItems = @(
-            @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY"; Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
-            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+            @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
+            @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"},
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
-            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
+            @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
             @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
+            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
+            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
             @{Name="Back";                                URL="BACK";                  Desc="Return to main menu"}
         )
         $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
@@ -1695,6 +2066,27 @@ function Show-ToolboxPage {
                 if ($tu -eq "USB_ANALYZER")        { Show-UsbAnalyzer; return }
                 if ($tu -eq "GAMEBAR_FIX")         { Invoke-GameBarNotificationFix; return }
                 if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
+                if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
+                if ($tu -eq "DEEPPOLL") {
+                    $targetUrl = "https://tools.mariusheier.com/deeppoll"
+                    $defaultBrowser = Get-DefaultBrowser
+                    $browserPath = Get-BrowserPath $defaultBrowser
+                    if (-not $browserPath) {
+                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                            if ($browser -ne $defaultBrowser) {
+                                $browserPath = Get-BrowserPath $browser
+                                if ($browserPath) { break }
+                            }
+                        }
+                    }
+                    if ($browserPath) {
+                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                        $wW=1200; $wH=800
+                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
+                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
+                    } else { Start-Process $targetUrl }
+                    return
+                }
                 if ($tu -eq "BETA_PORTAL") {
                     $targetUrl = "https://beta.mariusheier.com/"
                     $defaultBrowser = Get-DefaultBrowser
@@ -1717,7 +2109,7 @@ function Show-ToolboxPage {
                 }
                 if ($tu -eq "APP_INFO")      { Show-AppInfoDialog; return }
                 if ($tu -eq "DISCORD") {
-                    Start-Process "https://discord.gg/zDkNxusajK"
+                    Start-Process "https://discord.com/invite/9MZXjbrB6P"
                     return
                 }
                 if ($tu -eq "FR33THY_GUIDE") {
@@ -2003,10 +2395,48 @@ $script:rgbTimer.Add_Tick({
 
 $script:rgbTimer.Start()
 
-# Add Credits Label (Red text at bottom)
+# ── SETTINGS FILE WATCHER — hot-reload when Settings.ini is edited externally ─
+$script:settingsWatcher = $null
+try {
+    $script:settingsWatcher = New-Object System.IO.FileSystemWatcher
+    $script:settingsWatcher.Path   = $script:InstallDir
+    $script:settingsWatcher.Filter = "Settings.ini"
+    $script:settingsWatcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite
+    $script:settingsWatcher.EnableRaisingEvents = $true
+
+    # Use a short debounce timer so rapid saves don't retrigger multiple times
+    $script:watchDebounce = New-Object System.Windows.Forms.Timer
+    $script:watchDebounce.Interval = 600
+
+    $script:watchDebounce.Add_Tick({
+        $script:watchDebounce.Stop()
+        # Read new settings
+        Read-Settings
+        # Apply volume change immediately if music is playing
+        if ($script:MusicEnabled) {
+            [MciAudio]::SetVolume($script:MusicVolume)
+        } else {
+            Stop-Music
+        }
+        # Refresh volume UI on the UI thread
+        if ($muteBtn -and $muteBtn.IsHandleCreated) {
+            $muteBtn.Invoke([Action]{
+                $muteBtn.Invalidate()
+                $volPctLabel.Text = "$($script:MusicVolume)%"
+                $script:volSliderPanel.Invalidate()
+            })
+        }
+    })
+
+    Register-ObjectEvent -InputObject $script:settingsWatcher -EventName Changed -Action {
+        $script:watchDebounce.Stop()
+        $script:watchDebounce.Start()
+    } | Out-Null
+} catch {}
+
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Location = New-Object System.Drawing.Point(5, 800)
-$versionLabel.Size = New-Object System.Drawing.Size(120, 28)
+$versionLabel.Size = New-Object System.Drawing.Size(70, 28)
 $versionLabel.Text = "v$script:CurrentVersion"
 $versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $versionLabel.ForeColor = [System.Drawing.Color]::Red
@@ -2014,15 +2444,153 @@ $versionLabel.TextAlign = "MiddleLeft"
 $versionLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($versionLabel)
 
+# Credits — full panel width, MiddleCenter, sent to back so controls above it get clicks
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(125, 800)
-$creditsLabel.Size = New-Object System.Drawing.Size(600, 28)
-$creditsLabel.Text = "Created by: @mariusheier | Script by: @EODBruz"
+$creditsLabel.Location = New-Object System.Drawing.Point(0, 800)
+$creditsLabel.Size = New-Object System.Drawing.Size(780, 28)
+$creditsLabel.Text = "Created by: @mariusheier  |  Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
 $creditsLabel.TextAlign = "MiddleCenter"
 $creditsLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($creditsLabel)
+$creditsLabel.SendToBack()
+$versionLabel.BringToFront()
+
+# ── VOLUME CONTROL STRIP ─────────────────────────────────────────────────────
+# Right-aligned: [speaker 24px][4][slider 100px][4][pct 34px] = 166px, X=678..844
+$script:volSliderDragging = $false
+
+# ── Speaker toggle — GDI+ painted, no Unicode dependency ────────────────────
+$muteBtn = New-Object System.Windows.Forms.Button
+$muteBtn.Location  = New-Object System.Drawing.Point(678, 800)
+$muteBtn.Size      = New-Object System.Drawing.Size(24, 24)
+$muteBtn.FlatStyle = "Flat"
+$muteBtn.BackColor = [System.Drawing.Color]::Black
+$muteBtn.Text      = ""
+$muteBtn.Cursor    = [System.Windows.Forms.Cursors]::Hand
+$muteBtn.FlatAppearance.BorderSize         = 0
+$muteBtn.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+$muteBtn.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::Black
+
+$muteBtn.Add_Paint({
+    param($sender, $e)
+    $g = $e.Graphics
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $on  = $script:MusicEnabled
+    $col = if ($on) { [System.Drawing.Color]::Yellow } else { [System.Drawing.Color]::FromArgb(80,80,80) }
+    $b   = New-Object System.Drawing.SolidBrush($col)
+    $p   = New-Object System.Drawing.Pen($col, 1.5)
+
+    # Speaker body: filled trapezoid
+    $pts = @(
+        [System.Drawing.Point]::new(3,8),
+        [System.Drawing.Point]::new(7,8),
+        [System.Drawing.Point]::new(11,4),
+        [System.Drawing.Point]::new(11,18),
+        [System.Drawing.Point]::new(7,14),
+        [System.Drawing.Point]::new(3,14)
+    )
+    $g.FillPolygon($b, $pts)
+
+    if ($on) {
+        # Two sound arcs
+        $g.DrawArc($p, 12, 7,  5,  8, -50, 100)
+        $g.DrawArc($p, 13, 4,  8, 14, -50, 100)
+    } else {
+        # Red X
+        $px = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(210,50,50), 2.0)
+        $g.DrawLine($px, 13, 7, 20, 14)
+        $g.DrawLine($px, 20, 7, 13, 14)
+        $px.Dispose()
+    }
+    $b.Dispose(); $p.Dispose()
+})
+
+$muteBtn.Add_Click({
+    Toggle-Music
+    $muteBtn.Invalidate()
+    $script:volSliderPanel.Invalidate()
+})
+$mainPanel.Controls.Add($muteBtn)
+$muteBtn.BringToFront()
+
+# ── Slim volume slider panel ─────────────────────────────────────────────────
+$script:volSliderPanel = New-Object System.Windows.Forms.Panel
+$script:volSliderPanel.Location  = New-Object System.Drawing.Point(706, 807)
+$script:volSliderPanel.Size      = New-Object System.Drawing.Size(100, 14)
+$script:volSliderPanel.BackColor = [System.Drawing.Color]::Black
+$script:volSliderPanel.Cursor    = [System.Windows.Forms.Cursors]::Hand
+
+function Get-ThumbX {
+    $trackW = $script:volSliderPanel.Width - 10
+    return 5 + [int]($script:MusicVolume / 100.0 * $trackW)
+}
+
+$script:volSliderPanel.Add_Paint({
+    param($sender, $e)
+    $g = $e.Graphics
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $on      = $script:MusicEnabled
+    $cy      = 7
+    $trackW  = $sender.Width - 10
+    $thumbX  = Get-ThumbX
+    $thumbR  = 5
+
+    # Track bg
+    $bgB = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(55,55,55))
+    $g.FillRectangle($bgB, 5, ($cy-1), $trackW, 3)
+    $bgB.Dispose()
+
+    # Fill + thumb color
+    $fc = if ($on) { [System.Drawing.Color]::Yellow } else { [System.Drawing.Color]::FromArgb(75,75,75) }
+    $fb = New-Object System.Drawing.SolidBrush($fc)
+    $fw = [Math]::Max(0, $thumbX - 5)
+    if ($fw -gt 0) { $g.FillRectangle($fb, 5, ($cy-1), $fw, 3) }
+    $g.FillEllipse($fb, ($thumbX - $thumbR), ($cy - $thumbR + 1), $thumbR*2, $thumbR*2)
+    $fb.Dispose()
+})
+
+$script:volSliderPanel.Add_MouseDown({
+    param($s, $e)
+    $script:volSliderDragging = $true
+    $raw = [int](([Math]::Max(5,[Math]::Min($s.Width-5,$e.X))-5)/($s.Width-10)*100)
+    $script:MusicVolume = [Math]::Max(0,[Math]::Min(100,$raw))
+    [MciAudio]::SetVolume($script:MusicVolume)
+    $volPctLabel.Text = "$($script:MusicVolume)%"
+    $s.Invalidate()
+})
+$script:volSliderPanel.Add_MouseMove({
+    param($s, $e)
+    if (-not $script:volSliderDragging) { return }
+    $raw = [int](([Math]::Max(5,[Math]::Min($s.Width-5,$e.X))-5)/($s.Width-10)*100)
+    $script:MusicVolume = [Math]::Max(0,[Math]::Min(100,$raw))
+    [MciAudio]::SetVolume($script:MusicVolume)
+    $volPctLabel.Text = "$($script:MusicVolume)%"
+    $s.Invalidate()
+})
+$script:volSliderPanel.Add_MouseUp({
+    param($s, $e)
+    if (-not $script:volSliderDragging) { return }
+    $script:volSliderDragging = $false
+    Save-Settings
+    $s.Invalidate()
+})
+
+$mainPanel.Controls.Add($script:volSliderPanel)
+$script:volSliderPanel.BringToFront()
+
+# ── Volume % label ────────────────────────────────────────────────────────────
+$volPctLabel = New-Object System.Windows.Forms.Label
+$volPctLabel.Location  = New-Object System.Drawing.Point(810, 800)
+$volPctLabel.Size      = New-Object System.Drawing.Size(34, 24)
+$volPctLabel.Text      = "$($script:MusicVolume)%"
+$volPctLabel.Font      = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Bold)
+$volPctLabel.ForeColor = [System.Drawing.Color]::FromArgb(160,160,160)
+$volPctLabel.BackColor = [System.Drawing.Color]::Black
+$volPctLabel.TextAlign = "MiddleLeft"
+$mainPanel.Controls.Add($volPctLabel)
+$volPctLabel.BringToFront()
 
 $form.Controls.Add($mainPanel)
 
@@ -2033,10 +2601,24 @@ $form.Add_KeyDown({
     }
 })
 
-$form.Add_Shown({$form.Activate()})
+$form.Add_Shown({
+    $form.Activate()
+    # Sync volume controls to actual loaded settings
+    $muteBtn.Invalidate()
+    $volPctLabel.Text = "$($script:MusicVolume)%"
+    $script:volSliderPanel.Invalidate()
+    # Retry music in case mp3 downloaded after initial Start-Music
+    if ($script:MusicEnabled) { Start-Music }
+})
 $form.Add_FormClosing({
     $script:rgbTimer.Stop()
     $script:rgbTimer.Dispose()
+    if ($script:settingsWatcher) {
+        $script:settingsWatcher.EnableRaisingEvents = $false
+        $script:settingsWatcher.Dispose()
+    }
+    if ($script:watchDebounce) { $script:watchDebounce.Stop(); $script:watchDebounce.Dispose() }
+    Stop-Music
 })
 $form.Add_FormClosed({
     [System.Diagnostics.Process]::GetCurrentProcess().Kill()
