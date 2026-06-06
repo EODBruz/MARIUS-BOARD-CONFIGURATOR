@@ -330,7 +330,10 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 - `README.md` — This file
 - `logo.png` — MARIUS logo
 - `Title.png` — Title banner displayed inside the app
-- `controller-telemetry.html` — HID Telemetry Diagnostic Tool (served from GitHub, no local file needed)
+- `MMusic.mp3` — Background music file, downloaded and cached to `%APPDATA%\MARIUS` on first run
+- `controller-telemetry.html` — HID Telemetry Diagnostic Tool (downloaded fresh from GitHub each launch, no local file needed)
+
+> **Note:** `Settings.ini` is generated locally in `%APPDATA%\MARIUS` on first run and is never overwritten by updates. It stores your music enabled/muted state and volume level.
 
 ---
 
@@ -368,7 +371,7 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 - Added **volume slider** to the main menu bottom bar — drag to set volume live, saves to `Settings.ini` without overwriting your custom settings
 - Added **Troubleshooting** to Marius Toolbox — in-app guide covering common controller issues (overclock conflicts, disconnects, connection failures, button bugs)
 - Added **DeepPoll** to Marius Toolbox — links to [tools.mariusheier.com/deeppoll](https://tools.mariusheier.com/deeppoll) for kernel-level ETW polling rate measurement. A native built-in polling rate tool is planned for a future version
-- Improved **credits** alignment in the main menu bottom bar
+- Feedback if you dont like the music tab please message me on twitter @eodbruz
 
 ### v3.6
 - Added **HID Telemetry Diagnostic Tool** to Marius Toolbox — advanced diagnostic tool by [@TheQuest818](https://github.com/TheQuest818)
