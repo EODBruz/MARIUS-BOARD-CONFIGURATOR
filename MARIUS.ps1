@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7
+    MARIUS Board Configurator V3.7.1
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -18,7 +18,7 @@
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7
+    Script Version 3.7.1
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7"
+$script:CurrentVersion = "3.7.1"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -1804,19 +1804,23 @@ function Show-TroubleshootingDialog {
     $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
     $dlg.Controls.Add($inner)
 
-    # RGB border timer
+    # ── RGB border timer (matches Gamebar pattern with script-scoped hue) ──────
+    $script:tsHue = if ($script:rgbHue) { $script:rgbHue } else { 0 }
     $tsRgbTimer = New-Object System.Windows.Forms.Timer
     $tsRgbTimer.Interval = 40
     $tsRgbTimer.Add_Tick({
-        $script:rgbHue = ($script:rgbHue + 2) % 360
-        $h = $script:rgbHue / 360.0; $i = [Math]::Floor($h * 6); $f = $h * 6 - $i; $q = 1 - $f; $t = $f
+        $script:tsHue = ($script:tsHue + 2) % 360
+        $h = $script:tsHue / 360.0
+        $i = [Math]::Floor($h * 6)
+        $f = $h * 6 - $i
+        $q = 1 - $f; $t = $f
         switch ($i % 6) {
-            0 { $r=255; $g=[int]($t*255); $b=0 }
-            1 { $r=[int]($q*255); $g=255; $b=0 }
-            2 { $r=0; $g=[int]($t*255); $b=255 }
-            3 { $r=0; $g=[int]($q*255); $b=255 }
-            4 { $r=[int]($t*255); $g=0; $b=255 }
-            5 { $r=255; $g=0; $b=[int]($q*255) }
+            0 { $r = 255; $g = [int]($t*255); $b = 0 }
+            1 { $r = [int]($q*255); $g = 255; $b = 0 }
+            2 { $r = 0; $g = 255; $b = [int]($t*255) }
+            3 { $r = 0; $g = [int]($q*255); $b = 255 }
+            4 { $r = [int]($t*255); $g = 0; $b = 255 }
+            5 { $r = 255; $g = 0; $b = [int]($q*255) }
         }
         $dlg.BackColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
     })
@@ -1835,7 +1839,7 @@ function Show-TroubleshootingDialog {
 
     $picTitle = New-Object System.Windows.Forms.PictureBox
     $picTitle.Location  = New-Object System.Drawing.Point(0, 0)
-    $picTitle.Size      = New-Object System.Drawing.Size(($W - 50), 70)
+    $picTitle.Size      = New-Object System.Drawing.Size(($W - 6), 70)
     $picTitle.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
     $picTitle.Add_Paint({
         param($sender, $e); $g=$e.Graphics
@@ -1853,22 +1857,6 @@ function Show-TroubleshootingDialog {
     $picTitle.Add_MouseMove({ if($script:tsDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:tsDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:tsDY } })
     $picTitle.Add_MouseUp({ $script:tsDrag=$false })
     $titleBar.Controls.Add($picTitle)
-
-    # X button
-    $btnX = New-Object System.Windows.Forms.Button
-    $btnX.Location  = New-Object System.Drawing.Point(($W - 52), 18)
-    $btnX.Size      = New-Object System.Drawing.Size(32, 32)
-    $btnX.Text      = "X"
-    $btnX.FlatStyle = "Flat"
-    $btnX.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
-    $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
-    $btnX.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $btnX.FlatAppearance.BorderSize = 0
-    $btnX.Cursor    = [System.Windows.Forms.Cursors]::Hand
-    $btnX.Add_Click({ $dlg.Close() })
-    $btnX.Add_MouseEnter({ $btnX.ForeColor = [System.Drawing.Color]::White })
-    $btnX.Add_MouseLeave({ $btnX.ForeColor = [System.Drawing.Color]::FromArgb(140,140,140) })
-    $titleBar.Controls.Add($btnX)
 
     # Divider
     $div = New-Object System.Windows.Forms.Panel
@@ -2446,8 +2434,8 @@ $mainPanel.Controls.Add($versionLabel)
 
 # Credits — full panel width, MiddleCenter, sent to back so controls above it get clicks
 $creditsLabel = New-Object System.Windows.Forms.Label
-$creditsLabel.Location = New-Object System.Drawing.Point(0, 800)
-$creditsLabel.Size = New-Object System.Drawing.Size(780, 28)
+$creditsLabel.Location = New-Object System.Drawing.Point(14, 800)
+$creditsLabel.Size = New-Object System.Drawing.Size(766, 28)
 $creditsLabel.Text = "Created by: @mariusheier  |  Script by: @EODBruz"
 $creditsLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $creditsLabel.ForeColor = [System.Drawing.Color]::Red
@@ -2470,8 +2458,10 @@ $muteBtn.BackColor = [System.Drawing.Color]::Black
 $muteBtn.Text      = ""
 $muteBtn.Cursor    = [System.Windows.Forms.Cursors]::Hand
 $muteBtn.FlatAppearance.BorderSize         = 0
+$muteBtn.FlatAppearance.BorderColor        = [System.Drawing.Color]::Black
 $muteBtn.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
 $muteBtn.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::Black
+$muteBtn.TabStop = $false
 
 $muteBtn.Add_Paint({
     param($sender, $e)
@@ -2517,8 +2507,8 @@ $muteBtn.BringToFront()
 
 # ── Slim volume slider panel ─────────────────────────────────────────────────
 $script:volSliderPanel = New-Object System.Windows.Forms.Panel
-$script:volSliderPanel.Location  = New-Object System.Drawing.Point(706, 807)
-$script:volSliderPanel.Size      = New-Object System.Drawing.Size(100, 14)
+$script:volSliderPanel.Location  = New-Object System.Drawing.Point(706, 805)
+$script:volSliderPanel.Size      = New-Object System.Drawing.Size(100, 16)
 $script:volSliderPanel.BackColor = [System.Drawing.Color]::Black
 $script:volSliderPanel.Cursor    = [System.Windows.Forms.Cursors]::Hand
 
