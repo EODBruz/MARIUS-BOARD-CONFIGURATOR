@@ -33,10 +33,16 @@ Official Application by [@EODBruz](https://github.com/EODBruz)
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
 ```
 
-**Step 2 — Reinstall:**
+**Step 2 — Reinstall (choose one):**
 
+Main app:
 ```powershell
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
+```
+
+Lite edition:
+```powershell
+iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUSLite.ps1 | iex
 ```
 
 **What the uninstaller removes:**
