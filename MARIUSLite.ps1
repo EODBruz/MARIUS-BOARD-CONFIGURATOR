@@ -133,7 +133,7 @@ function Install-DesktopShortcut {
             [Environment]::GetFolderPath('Desktop'),
             'MARIUS Board Configurator Lite.lnk'
         )
-        if (Test-Path $shortcutPath) { return }  # Already exists - don't recreate
+        if ((Test-Path $shortcutPath) -and (Test-Path $script:InstallPath)) { return }  # Valid - don't recreate
 
         $wsh = New-Object -ComObject WScript.Shell
         $sc  = $wsh.CreateShortcut($shortcutPath)
@@ -160,7 +160,7 @@ function Install-StartMenuShortcut {
             New-Item -ItemType Directory -Path $startMenuDir -Force | Out-Null
         }
         $shortcutPath = [System.IO.Path]::Combine($startMenuDir, 'MARIUS Board Configurator Lite.lnk')
-        if (Test-Path $shortcutPath) { return }  # Already exists - don't recreate
+        if ((Test-Path $shortcutPath) -and (Test-Path $script:InstallPath)) { return }  # Valid - don't recreate
 
         $wsh = New-Object -ComObject WScript.Shell
         $sc  = $wsh.CreateShortcut($shortcutPath)
@@ -183,12 +183,18 @@ function Invoke-SelfInstall {
             New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
         }
         $runningPath = $MyInvocation.ScriptName
-        # If running from a real file (not via | iex), copy it directly
         if ($runningPath -and ($runningPath -ne $script:InstallPath) -and (Test-Path $runningPath)) {
+            # Running from a downloaded file - copy it directly
             $sourceSize = (Get-Item $runningPath).Length
             if ($sourceSize -gt 10000) {
                 Copy-Item -Path $runningPath -Destination $script:InstallPath -Force -ErrorAction SilentlyContinue
             }
+        } elseif (-not (Test-Path $script:InstallPath)) {
+            # Running via iex pipe - download from GitHub so the shortcut has a real file to point to
+            try {
+                $wc = New-Object System.Net.WebClient
+                $wc.DownloadFile("https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUSLite.ps1", $script:InstallPath)
+            } catch {}
         }
     } catch {}
 }
