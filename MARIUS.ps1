@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.1
+    MARIUS Board Configurator V3.7.2
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7
+    Version: 3.7.2
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.1
+    Script Version 3.7.2
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.1"
+$script:CurrentVersion = "3.7.2"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -1426,9 +1426,8 @@ Invoke-SelfInstall
 # 2. Read saved settings
 Read-Settings
 
-# 3. Download music file if not cached, then start playback
+# 3. Download music file if not cached
 Get-MusicFile
-Start-Music
 
 # 2. Extract MBC icon and create Desktop shortcut (first run only)
 $script:IconPath = Install-MbcIcon
