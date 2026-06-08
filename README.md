@@ -23,17 +23,11 @@ Official Application by [@EODBruz](https://github.com/EODBruz)
 
 ---
 
-## 🗑️ Uninstall First (Existing Users)
+## 🚀 Quick Install (New Users)
 
-> **If you already have MARIUS installed, run the uninstaller FIRST before reinstalling.** This ensures a completely clean install with no leftover files or broken shortcuts.
+### Method 1: One-Liner (Recommended)
 
-**Step 1 — Uninstall:**
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
-```
-
-**Step 2 — Reinstall (choose one):**
+Open PowerShell and paste:
 
 Main app:
 ```powershell
@@ -45,24 +39,6 @@ Lite edition:
 iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUSLite.ps1 | iex
 ```
 
-**What the uninstaller removes:**
-- `%APPDATA%\MARIUS` folder (script and icon)
-- Desktop shortcut
-- Start Menu shortcut and folder
-- Any leftover temp update files in `%TEMP%`
-
----
-
-## 🚀 Quick Install (New Users)
-
-### Method 1: One-Liner (Recommended)
-
-Open PowerShell and paste:
-
-```powershell
-iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1 | iex
-```
-
 No downloads, no security prompts — runs instantly and installs itself automatically.
 
 ### Method 2: Manual Download
@@ -71,6 +47,20 @@ No downloads, no security prompts — runs instantly and installs itself automat
 2. Double-click the file
 
 The launcher downloads and runs the latest version automatically.
+
+---
+
+## 🗑️ Uninstall
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS_Uninstall.ps1 | iex
+```
+
+**What the uninstaller removes:**
+- `%APPDATA%\MARIUS` folder (script and icon)
+- Desktop shortcut
+- Start Menu shortcut and folder
+- Any leftover temp update files in `%TEMP%`
 
 ---
 
