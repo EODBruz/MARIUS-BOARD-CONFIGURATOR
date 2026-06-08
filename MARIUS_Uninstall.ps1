@@ -37,29 +37,41 @@ function Remove-IfExists {
 #   %APPDATA%\MARIUS\update.log
 Remove-IfExists "$env:APPDATA\MARIUS" "AppData folder (%APPDATA%\MARIUS)"
 
-# ── 2. Desktop shortcut ──────────────────────────────────────────────────────
+# ── 2. Desktop shortcuts ─────────────────────────────────────────────────────
 $desktopShortcut = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('Desktop'),
     'MARIUS Board Configurator.lnk'
 )
-Remove-IfExists $desktopShortcut "Desktop shortcut"
+Remove-IfExists $desktopShortcut "Desktop shortcut (Main)"
 
-# ── 3. Start Menu shortcut ───────────────────────────────────────────────────
+$desktopShortcutLite = [System.IO.Path]::Combine(
+    [Environment]::GetFolderPath('Desktop'),
+    'MARIUS Board Configurator Lite.lnk'
+)
+Remove-IfExists $desktopShortcutLite "Desktop shortcut (Lite)"
+
+# ── 3. Start Menu shortcuts ──────────────────────────────────────────────────
 $startMenuShortcut = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('StartMenu'),
     'Programs',
     'MARIUS Board Configurator',
     'MARIUS Board Configurator.lnk'
 )
-Remove-IfExists $startMenuShortcut "Start Menu shortcut (.lnk)"
+Remove-IfExists $startMenuShortcut "Start Menu shortcut - Main (.lnk)"
 
-# Also remove the Start Menu subfolder if it's now empty
 $startMenuDir = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('StartMenu'),
     'Programs',
     'MARIUS Board Configurator'
 )
-Remove-IfExists $startMenuDir "Start Menu folder"
+Remove-IfExists $startMenuDir "Start Menu folder (Main)"
+
+$startMenuShortcutLite = [System.IO.Path]::Combine(
+    [Environment]::GetFolderPath('StartMenu'),
+    'Programs',
+    'MARIUS Board Configurator Lite.lnk'
+)
+Remove-IfExists $startMenuShortcutLite "Start Menu shortcut - Lite (.lnk)"
 
 # ── 4. Temp update files (leftover from failed updates) ──────────────────────
 $tempFiles = Get-ChildItem -Path $env:TEMP -Filter "MARIUS_update_*.ps1" -ErrorAction SilentlyContinue
