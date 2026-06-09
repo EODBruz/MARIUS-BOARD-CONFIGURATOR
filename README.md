@@ -166,7 +166,7 @@ Unknown Intel or AMD controllers fall back to a generic chipset classification (
 
 Browser tiles open in app mode (no address bar) using the first detected Chromium browser in this order:
 
-Your default browser → Chrome → Edge → Brave → Opera → Vivaldi → Arc
+Your default browser → Chrome → Edge → Brave → Vivaldi → Arc → Warning "OperaGX Only Opens Normal Window" → "Opera doesnt use app mode!"
 
 If no Chromium browser is found, Windows' default URL handler is used instead.
 
