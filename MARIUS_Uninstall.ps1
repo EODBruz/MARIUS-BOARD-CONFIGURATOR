@@ -51,27 +51,38 @@ $desktopShortcutLite = [System.IO.Path]::Combine(
 Remove-IfExists $desktopShortcutLite "Desktop shortcut (Lite)"
 
 # ── 3. Start Menu shortcuts ──────────────────────────────────────────────────
-$startMenuShortcut = [System.IO.Path]::Combine(
+
+# Main - flat .lnk directly under Programs\
+$startMenuShortcutMain = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('StartMenu'),
     'Programs',
-    'MARIUS Board Configurator',
     'MARIUS Board Configurator.lnk'
 )
-Remove-IfExists $startMenuShortcut "Start Menu shortcut - Main (.lnk)"
+Remove-IfExists $startMenuShortcutMain "Start Menu shortcut (Main)"
 
-$startMenuDir = [System.IO.Path]::Combine(
+# Main - also catch if it was ever installed into its own subfolder
+$startMenuDirMain = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('StartMenu'),
     'Programs',
     'MARIUS Board Configurator'
 )
-Remove-IfExists $startMenuDir "Start Menu folder (Main)"
+Remove-IfExists $startMenuDirMain "Start Menu folder (Main, if exists)"
 
+# Lite - flat .lnk directly under Programs\
 $startMenuShortcutLite = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath('StartMenu'),
     'Programs',
     'MARIUS Board Configurator Lite.lnk'
 )
-Remove-IfExists $startMenuShortcutLite "Start Menu shortcut - Lite (.lnk)"
+Remove-IfExists $startMenuShortcutLite "Start Menu shortcut (Lite)"
+
+# Lite - also catch if it was ever installed into its own subfolder
+$startMenuDirLite = [System.IO.Path]::Combine(
+    [Environment]::GetFolderPath('StartMenu'),
+    'Programs',
+    'MARIUS Board Configurator Lite'
+)
+Remove-IfExists $startMenuDirLite "Start Menu folder (Lite, if exists)"
 
 # ── 4. Temp update files (leftover from failed updates) ──────────────────────
 $tempFiles = Get-ChildItem -Path $env:TEMP -Filter "MARIUS_update_*.ps1" -ErrorAction SilentlyContinue
