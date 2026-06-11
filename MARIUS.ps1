@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.2
+    MARIUS Board Configurator V3.7.3
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7.2
+    Version: 3.7.3
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.2
+    Script Version 3.7.3
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.2"
+$script:CurrentVersion = "3.7.3"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -485,6 +485,206 @@ function Get-BrowserPath {
 # ============================================================================
 # USB ANALYZER WINDOW
 # ============================================================================
+
+function Show-DeepPoll {
+    $script:dpExe = "$script:InstallDir\DeepPoll.exe"
+    $dpUrl = "https://github.com/MariusHeier/deeppoll/releases/latest/download/DeepPoll.exe"
+
+    # ── Download if not cached ─────────────────────────────────────────────
+    if (-not (Test-Path $script:dpExe)) {
+
+        $script:dlProgress = -1   # -1 = indeterminate, 0-100 = determinate
+
+        # ── Outer form: frameless, yellow 2px border via BackColor ─────────
+        $dlForm = New-Object System.Windows.Forms.Form
+        $dlForm.Text            = ""
+        $dlForm.Size            = New-Object System.Drawing.Size(360, 140)
+        $dlForm.StartPosition   = "CenterScreen"
+        $dlForm.FormBorderStyle = "None"
+        $dlForm.BackColor       = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlForm.TopMost         = $true
+
+        # ── Inner dark panel ───────────────────────────────────────────────
+        $dlInner = New-Object System.Windows.Forms.Panel
+        $dlInner.Location  = New-Object System.Drawing.Point(2, 2)
+        $dlInner.Size      = New-Object System.Drawing.Size(356, 136)
+        $dlInner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+
+        # ── Title ──────────────────────────────────────────────────────────
+        $dlTitle = New-Object System.Windows.Forms.Label
+        $dlTitle.Text      = "DEEPPOLL"
+        $dlTitle.ForeColor = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlTitle.Font      = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+        $dlTitle.AutoSize  = $false
+        $dlTitle.Size      = New-Object System.Drawing.Size(316, 28)
+        $dlTitle.Location  = New-Object System.Drawing.Point(20, 16)
+        $dlTitle.TextAlign = "MiddleLeft"
+
+        # ── Subtitle / status line ─────────────────────────────────────────
+        $dlSub = New-Object System.Windows.Forms.Label
+        $dlSub.Text      = "Downloading DeepPoll.exe..."
+        $dlSub.ForeColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
+        $dlSub.Font      = New-Object System.Drawing.Font("Segoe UI", 7)
+        $dlSub.AutoSize  = $false
+        $dlSub.Size      = New-Object System.Drawing.Size(316, 16)
+        $dlSub.Location  = New-Object System.Drawing.Point(20, 50)
+        $dlSub.TextAlign = "MiddleLeft"
+
+        # ── Custom-painted progress track ──────────────────────────────────
+        $dlTrack = New-Object System.Windows.Forms.Panel
+        $dlTrack.Location  = New-Object System.Drawing.Point(20, 76)
+        $dlTrack.Size      = New-Object System.Drawing.Size(268, 6)
+        $dlTrack.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+
+        $dlTrack.Add_Paint({
+            param($s, $ev)
+            $g   = $ev.Graphics
+            $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::None
+            $w   = $s.Width
+            $h   = $s.Height
+            $pct = $script:dlProgress
+
+            # Track background
+            $bg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(38, 38, 38))
+            $g.FillRectangle($bg, 0, 0, $w, $h)
+            $bg.Dispose()
+
+            if ($pct -lt 0) {
+                # Indeterminate: animated yellow pulse
+                $blockW = [int]($w * 0.35)
+                $tick   = [int]([System.Environment]::TickCount / 8) % ($w + $blockW)
+                $x0     = $tick - $blockW
+                $rect   = New-Object System.Drawing.Rectangle($x0, 0, $blockW, $h)
+                try {
+                    $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+                        $rect,
+                        [System.Drawing.Color]::FromArgb(60, 200, 160, 0),
+                        [System.Drawing.Color]::FromArgb(255, 220, 0),
+                        [System.Drawing.Drawing2D.LinearGradientMode]::Horizontal
+                    )
+                    $g.FillRectangle($grad, $rect)
+                    $grad.Dispose()
+                } catch {
+                    $fb = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 220, 0))
+                    $g.FillRectangle($fb, $rect)
+                    $fb.Dispose()
+                }
+            } else {
+                # Determinate fill
+                $fillW = [int]($w * $pct / 100.0)
+                if ($fillW -gt 0) {
+                    $fillRect = New-Object System.Drawing.Rectangle(0, 0, $fillW, $h)
+                    try {
+                        $fillGrad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+                            $fillRect,
+                            [System.Drawing.Color]::FromArgb(255, 235, 30),
+                            [System.Drawing.Color]::FromArgb(200, 170, 0),
+                            [System.Drawing.Drawing2D.LinearGradientMode]::Vertical
+                        )
+                        $g.FillRectangle($fillGrad, $fillRect)
+                        $fillGrad.Dispose()
+                    } catch {
+                        $fb2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 220, 0))
+                        $g.FillRectangle($fb2, $fillRect)
+                        $fb2.Dispose()
+                    }
+                }
+            }
+        })
+
+        # ── Percent label (right of bar) ───────────────────────────────────
+        $dlPct = New-Object System.Windows.Forms.Label
+        $dlPct.Text      = ""
+        $dlPct.ForeColor = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlPct.Font      = New-Object System.Drawing.Font("Segoe UI", 7, [System.Drawing.FontStyle]::Bold)
+        $dlPct.AutoSize  = $false
+        $dlPct.Size      = New-Object System.Drawing.Size(48, 14)
+        $dlPct.Location  = New-Object System.Drawing.Point(296, 71)
+        $dlPct.TextAlign = "MiddleRight"
+
+        # ── KB transferred label ───────────────────────────────────────────
+        $dlStatus = New-Object System.Windows.Forms.Label
+        $dlStatus.Text      = "Connecting..."
+        $dlStatus.ForeColor = [System.Drawing.Color]::FromArgb(75, 75, 75)
+        $dlStatus.Font      = New-Object System.Drawing.Font("Segoe UI", 7)
+        $dlStatus.AutoSize  = $false
+        $dlStatus.Size      = New-Object System.Drawing.Size(316, 14)
+        $dlStatus.Location  = New-Object System.Drawing.Point(20, 96)
+        $dlStatus.TextAlign = "MiddleLeft"
+
+        # ── Marquee timer (~60 fps repaint) ───────────────────────────────
+        $dlTimer = New-Object System.Windows.Forms.Timer
+        $dlTimer.Interval = 16
+        $dlTimer.Add_Tick({ $dlTrack.Invalidate() })
+
+        $dlInner.Controls.AddRange(@($dlTitle, $dlSub, $dlTrack, $dlPct, $dlStatus))
+        $dlForm.Controls.Add($dlInner)
+        $dlForm.Show()
+        $dlForm.Refresh()
+
+        $script:dlProgress = -1
+        $dlTimer.Start()
+
+        # ── Download ───────────────────────────────────────────────────────
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $wc = New-Object System.Net.WebClient
+            $wc.Headers.Add("Cache-Control", "no-cache")
+
+            $wc.add_DownloadProgressChanged({
+                param($s, $e)
+                if ($e.TotalBytesToReceive -gt 0) {
+                    $script:dlProgress = $e.ProgressPercentage
+                    $dlTimer.Stop()
+                    $recv  = [Math]::Round($e.BytesReceived       / 1KB)
+                    $total = [Math]::Round($e.TotalBytesToReceive / 1KB)
+                    $dlStatus.Text = "$recv KB  /  $total KB"
+                    $dlPct.Text    = "$($e.ProgressPercentage)%"
+                } else {
+                    $recv          = [Math]::Round($e.BytesReceived / 1KB)
+                    $dlStatus.Text = "$recv KB downloaded"
+                }
+                $dlTrack.Invalidate()
+                $dlForm.Refresh()
+            })
+
+            $wc.DownloadFile($dpUrl, $script:dpExe)
+
+            # ── Complete flash ─────────────────────────────────────────────
+            $dlTimer.Stop()
+            $script:dlProgress = 100
+            $dlStatus.Text     = "Complete."
+            $dlPct.Text        = "100%"
+            $dlSub.Text        = "DeepPoll.exe ready."
+            $dlSub.ForeColor   = [System.Drawing.Color]::FromArgb(255, 220, 0)
+            $dlTrack.Invalidate()
+            $dlForm.Refresh()
+            Start-Sleep -Milliseconds 500
+
+        } catch {
+            $dlTimer.Stop()
+            $dlForm.Close()
+            [System.Windows.Forms.MessageBox]::Show(
+                "Could not download DeepPoll.`n`nCheck your connection or grab it manually:`nhttps://github.com/MariusHeier/deeppoll/releases`n`n$_",
+                "Download Failed",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
+            return
+        }
+        $dlForm.Close()
+    }
+
+    # ── Launch directly, elevated ──────────────────────────────────────────
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName        = "cmd.exe"
+    $psi.Arguments       = "/k `"$script:dpExe`""
+    $psi.WindowStyle     = [System.Diagnostics.ProcessWindowStyle]::Normal
+    $psi.UseShellExecute = $true
+    $psi.Verb            = "runas"
+    [System.Diagnostics.Process]::Start($psi) | Out-Null
+}
+
 
 function Show-UsbAnalyzer {
     $analyzerForm = New-Object System.Windows.Forms.Form
@@ -2010,12 +2210,12 @@ function Show-ToolboxPage {
     if ($script:toolboxTiles.Count -eq 0) {
         $tbItems = @(
             @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
-            @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"},
+            @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
             @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
             @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
             @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
-            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"},
+            @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"; Admin="Requires Admin Permissions"},
             @{Name="Back";                                URL="BACK";                  Desc="Return to main menu"}
         )
         $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
@@ -2036,7 +2236,7 @@ function Show-ToolboxPage {
             $tbTile.Tag = $tbItem.URL
             $tbTile.Add_MouseEnter({ $this.BackColor=[System.Drawing.Color]::FromArgb(25,25,25); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::FromArgb(255,255,0); $this.FlatAppearance.BorderSize=2 })
             $tbTile.Add_MouseLeave({ $this.BackColor=[System.Drawing.Color]::FromArgb(15,15,15); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::Yellow; $this.FlatAppearance.BorderSize=1 })
-            $tbN=$tbItem.Name; $tbD=$tbItem.Desc
+            $tbN=$tbItem.Name; $tbD=$tbItem.Desc; $tbU=$tbItem.URL; $tbA=if($tbItem.Admin){$tbItem.Admin}else{""}
             $tbTile.Add_Paint({
                 param($s,$e); $g=$e.Graphics
                 $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
@@ -2044,8 +2244,14 @@ function Show-ToolboxPage {
                 $df=New-Object System.Drawing.Font("Segoe UI",8)
                 $wb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
                 $rb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Red)
-                $g.DrawString($tbN,$tf,$wb,20,12); $g.DrawString($tbD,$df,$rb,20,35)
-                $wb.Dispose();$rb.Dispose();$tf.Dispose();$df.Dispose()
+                $yb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+                $g.DrawString($tbN,$tf,$wb,20,12)
+                $g.DrawString($tbD,$df,$rb,20,35)
+                if ($tbA -ne "") {
+                    $descW = [int]$g.MeasureString($tbD,$df).Width
+                    $g.DrawString("  |  $tbA",$df,$yb,(20+$descW),35)
+                }
+                $wb.Dispose();$rb.Dispose();$yb.Dispose();$tf.Dispose();$df.Dispose()
             }.GetNewClosure())
             $tbTile.Add_Click({
                 $tu=$this.Tag
@@ -2054,26 +2260,7 @@ function Show-ToolboxPage {
                 if ($tu -eq "GAMEBAR_FIX")         { Invoke-GameBarNotificationFix; return }
                 if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
-                if ($tu -eq "DEEPPOLL") {
-                    $targetUrl = "https://tools.mariusheier.com/deeppoll"
-                    $defaultBrowser = Get-DefaultBrowser
-                    $browserPath = Get-BrowserPath $defaultBrowser
-                    if (-not $browserPath) {
-                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
-                            if ($browser -ne $defaultBrowser) {
-                                $browserPath = Get-BrowserPath $browser
-                                if ($browserPath) { break }
-                            }
-                        }
-                    }
-                    if ($browserPath) {
-                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-                        $wW=1200; $wH=800
-                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
-                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
-                    } else { Start-Process $targetUrl }
-                    return
-                }
+                if ($tu -eq "DEEPPOLL") { Show-DeepPoll; return }
                 if ($tu -eq "BETA_PORTAL") {
                     $targetUrl = "https://beta.mariusheier.com/"
                     $defaultBrowser = Get-DefaultBrowser
