@@ -95,6 +95,7 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Join Marius Discord** | Opens the official Marius community Discord server |
 | **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
 | **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
+| **Auto Calibration (Beta)** | Edit your controller's calibration config (xMin/yMin/xMax/yMax) to yield better stick results |
 | **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
