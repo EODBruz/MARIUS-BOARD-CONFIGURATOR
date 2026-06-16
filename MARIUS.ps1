@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.3
+    MARIUS Board Configurator V3.7.4
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7.3
+    Version: 3.7.4
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.3
+    Script Version 3.7.4
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.3"
+$script:CurrentVersion = "3.7.4"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -502,7 +502,7 @@ function Show-DeepPoll {
         $dlForm.StartPosition   = "CenterScreen"
         $dlForm.FormBorderStyle = "None"
         $dlForm.BackColor       = [System.Drawing.Color]::FromArgb(255, 220, 0)
-        $dlForm.TopMost         = $true
+        $dlForm.TopMost         = $false
 
         # ── Inner dark panel ───────────────────────────────────────────────
         $dlInner = New-Object System.Windows.Forms.Panel
@@ -685,6 +685,761 @@ function Show-DeepPoll {
     [System.Diagnostics.Process]::Start($psi) | Out-Null
 }
 
+
+function Show-AutoCalibrate {
+    # ── State ────────────────────────────────────────────────────────────
+    $script:acFilePath = $null
+    $script:acRawText  = $null
+    # Each match: @{ Key='xMin'|'yMin'|'xMax'|'yMax'; Value=int; Start=int; Length=int; Stick='LEFT'|'RIGHT' }
+    $script:acMatches  = New-Object System.Collections.Generic.List[object]
+
+    $W = 720; $H = 940
+    $dlg = New-Object System.Windows.Forms.Form
+    $dlg.Text            = ""
+    $dlg.Width           = $W
+    $dlg.Height          = $H
+    $dlg.StartPosition   = "CenterScreen"
+    $dlg.FormBorderStyle = "None"
+    $dlg.BackColor       = [System.Drawing.Color]::Yellow
+    $dlg.TopMost         = $false
+
+    $script:acDrag = $false; $script:acDX = 0; $script:acDY = 0
+
+    $inner = New-Object System.Windows.Forms.Panel
+    $inner.Location  = New-Object System.Drawing.Point(3, 3)
+    $inner.Size      = New-Object System.Drawing.Size(($W - 6), ($H - 6))
+    $inner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $dlg.Controls.Add($inner)
+
+    # ── RGB border timer (matches Troubleshooting/DeepPoll pattern) ─────────
+    $script:acHue = if ($script:rgbHue) { $script:rgbHue } else { 0 }
+    $acRgbTimer = New-Object System.Windows.Forms.Timer
+    $acRgbTimer.Interval = 40
+    $acRgbTimer.Add_Tick({
+        $script:acHue = ($script:acHue + 2) % 360
+        $h = $script:acHue / 360.0
+        $i = [Math]::Floor($h * 6)
+        $f = $h * 6 - $i
+        $q = 1 - $f; $t = $f
+        switch ($i % 6) {
+            0 { $r = 255; $g = [int]($t*255); $b = 0 }
+            1 { $r = [int]($q*255); $g = 255; $b = 0 }
+            2 { $r = 0; $g = 255; $b = [int]($t*255) }
+            3 { $r = 0; $g = [int]($q*255); $b = 255 }
+            4 { $r = [int]($t*255); $g = 0; $b = 255 }
+            5 { $r = 255; $g = 0; $b = [int]($q*255) }
+        }
+        $dlg.BackColor = [System.Drawing.Color]::FromArgb($r, $g, $b)
+    })
+    $acRgbTimer.Start()
+    $dlg.Add_FormClosed({ $acRgbTimer.Stop(); $acRgbTimer.Dispose() })
+
+    # ── Title bar ─────────────────────────────────────────────────────────
+    $titleBar = New-Object System.Windows.Forms.Panel
+    $titleBar.Location  = New-Object System.Drawing.Point(0, 0)
+    $titleBar.Size      = New-Object System.Drawing.Size(($W - 6), 70)
+    $titleBar.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $inner.Controls.Add($titleBar)
+    $titleBar.Add_MouseDown({ $script:acDrag=$true; $script:acDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:acDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $titleBar.Add_MouseMove({ if($script:acDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:acDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:acDY } })
+    $titleBar.Add_MouseUp({ $script:acDrag=$false })
+
+    $picTitle = New-Object System.Windows.Forms.PictureBox
+    $picTitle.Location  = New-Object System.Drawing.Point(0, 0)
+    $picTitle.Size      = New-Object System.Drawing.Size(($W - 6), 70)
+    $picTitle.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+    $picTitle.Add_Paint({
+        param($sender, $e); $g=$e.Graphics
+        $g.SmoothingMode=[System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+        $sf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $sb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(80,0,0,0))
+        $tf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
+        $tb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $g.DrawString("BETA AUTO CALIBRATION",$sf,$sb,22,17)
+        $g.DrawString("BETA AUTO CALIBRATION",$tf,$tb,20,15)
+        $sf.Dispose();$sb.Dispose();$tf.Dispose();$tb.Dispose()
+    })
+    $picTitle.Add_MouseDown({ $script:acDrag=$true; $script:acDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:acDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
+    $picTitle.Add_MouseMove({ if($script:acDrag){ $dlg.Left=[System.Windows.Forms.Cursor]::Position.X-$script:acDX; $dlg.Top=[System.Windows.Forms.Cursor]::Position.Y-$script:acDY } })
+    $picTitle.Add_MouseUp({ $script:acDrag=$false })
+    $titleBar.Controls.Add($picTitle)
+
+    # Close (X) button
+    $btnClose = New-Object System.Windows.Forms.Button
+    $btnClose.Location  = New-Object System.Drawing.Point(($W - 6 - 36), 8)
+    $btnClose.Size      = New-Object System.Drawing.Size(28, 28)
+    $btnClose.Text      = "X"
+    $btnClose.FlatStyle = "Flat"
+    $btnClose.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btnClose.ForeColor = [System.Drawing.Color]::Yellow
+    $btnClose.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $btnClose.FlatAppearance.BorderSize = 1
+    $btnClose.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btnClose.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnClose.Add_Click({ $dlg.Close() })
+    $titleBar.Controls.Add($btnClose)
+
+    # Divider
+    $div = New-Object System.Windows.Forms.Panel
+    $div.Location  = New-Object System.Drawing.Point(0, 70)
+    $div.Size      = New-Object System.Drawing.Size(($W - 6), 2)
+    $div.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+    $inner.Controls.Add($div)
+
+    # ── ALPHA info panel (three rows) ────────────────────────────────────
+    $badgePanel = New-Object System.Windows.Forms.Panel
+    $badgePanel.Location  = New-Object System.Drawing.Point(20, 80)
+    $badgePanel.Size      = New-Object System.Drawing.Size(($W - 46), 96)
+    $badgePanel.BackColor = [System.Drawing.Color]::FromArgb(22, 22, 0)
+    $inner.Controls.Add($badgePanel)
+
+    # Row 1: alpha warning
+    $lblStatus = New-Object System.Windows.Forms.Label
+    $lblStatus.Location  = New-Object System.Drawing.Point(8, 4)
+    $lblStatus.Size      = New-Object System.Drawing.Size(($W - 62), 24)
+    $lblStatus.Text      = "[BETA]  This feature is Beta - please report any issues!"
+    $lblStatus.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblStatus.ForeColor = [System.Drawing.Color]::Yellow
+    $lblStatus.BackColor = [System.Drawing.Color]::Transparent
+    $lblStatus.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($lblStatus)
+
+    # Row 2: backup reminder
+    $lblBackupNote = New-Object System.Windows.Forms.Label
+    $lblBackupNote.Location  = New-Object System.Drawing.Point(8, 30)
+    $lblBackupNote.Size      = New-Object System.Drawing.Size(($W - 62), 20)
+    $lblBackupNote.Text      = "Load reads your file directly. Save writes your edits back to that same file."
+    $lblBackupNote.Font      = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Italic)
+    $lblBackupNote.ForeColor = [System.Drawing.Color]::FromArgb(175, 175, 90)
+    $lblBackupNote.BackColor = [System.Drawing.Color]::Transparent
+    $lblBackupNote.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($lblBackupNote)
+
+    # Row 3: red manual backup warning - tells user exactly how to do it
+    $lblBackupWarn = New-Object System.Windows.Forms.Label
+    $lblBackupWarn.Location  = New-Object System.Drawing.Point(8, 52)
+    $lblBackupWarn.Size      = New-Object System.Drawing.Size(($W - 62), 20)
+    $lblBackupWarn.Text      = "MAKE SURE TO BACK UP YOUR ORIGINAL FILE - this works best on a fresh, known-good calibration!"
+    $lblBackupWarn.Font      = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Bold)
+    $lblBackupWarn.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
+    $lblBackupWarn.BackColor = [System.Drawing.Color]::Transparent
+    $lblBackupWarn.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($lblBackupWarn)
+
+    # Row 4: extra red line - tell them to keep a copy OUTSIDE the tool too
+    $lblBackupWarn2 = New-Object System.Windows.Forms.Label
+    $lblBackupWarn2.Location  = New-Object System.Drawing.Point(8, 72)
+    $lblBackupWarn2.Size      = New-Object System.Drawing.Size(($W - 62), 20)
+    $lblBackupWarn2.Text      = "KEEP YOUR ORIGINAL FILE SAFE - copy it to another folder or USB drive as your own backup!"
+    $lblBackupWarn2.Font      = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Bold)
+    $lblBackupWarn2.ForeColor = [System.Drawing.Color]::FromArgb(220, 50, 50)
+    $lblBackupWarn2.BackColor = [System.Drawing.Color]::Transparent
+    $lblBackupWarn2.TextAlign = "MiddleLeft"
+    $badgePanel.Controls.Add($lblBackupWarn2)
+
+    # ── Load / Save / Exit buttons ───────────────────────────────────────
+    $btnLoad = New-Object System.Windows.Forms.Button
+    $btnLoad.Location  = New-Object System.Drawing.Point(20, 188)
+    $btnLoad.Size      = New-Object System.Drawing.Size(155, 36)
+    $btnLoad.Text      = "LOAD CONFIG"
+    $btnLoad.FlatStyle = "Flat"
+    $btnLoad.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btnLoad.ForeColor = [System.Drawing.Color]::Yellow
+    $btnLoad.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnLoad.FlatAppearance.BorderSize = 1
+    $btnLoad.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btnLoad.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $inner.Controls.Add($btnLoad)
+
+    $btnSave = New-Object System.Windows.Forms.Button
+    $btnSave.Location  = New-Object System.Drawing.Point(185, 188)
+    $btnSave.Size      = New-Object System.Drawing.Size(155, 36)
+    $btnSave.Text      = "SAVE CONFIG"
+    $btnSave.FlatStyle = "Flat"
+    $btnSave.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btnSave.ForeColor = [System.Drawing.Color]::FromArgb(120,120,120)
+    $btnSave.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnSave.FlatAppearance.BorderSize = 1
+    $btnSave.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(80,80,80)
+    $btnSave.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnSave.Enabled   = $false
+    $inner.Controls.Add($btnSave)
+
+    # EXIT button - always enabled, closes the calibration dialog
+    $btnExit = New-Object System.Windows.Forms.Button
+    $btnExit.Location  = New-Object System.Drawing.Point(350, 188)
+    $btnExit.Size      = New-Object System.Drawing.Size(100, 36)
+    $btnExit.Text      = "EXIT"
+    $btnExit.FlatStyle = "Flat"
+    $btnExit.BackColor = [System.Drawing.Color]::FromArgb(28, 8, 8)
+    $btnExit.ForeColor = [System.Drawing.Color]::FromArgb(220, 60, 60)
+    $btnExit.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnExit.FlatAppearance.BorderSize = 1
+    $btnExit.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(180, 40, 40)
+    $btnExit.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(50, 10, 10)
+    $btnExit.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(70, 10, 10)
+    $btnExit.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnExit.Add_Click({ $dlg.Close() })
+    $inner.Controls.Add($btnExit)
+
+    $lblPath = New-Object System.Windows.Forms.Label
+    $lblPath.Location  = New-Object System.Drawing.Point(460, 154)
+    $lblPath.Size      = New-Object System.Drawing.Size(($W - 6 - 460 - 20), 24)
+    $lblPath.Text      = "No file loaded"
+    $lblPath.Font      = New-Object System.Drawing.Font("Segoe UI", 8)
+    $lblPath.ForeColor = [System.Drawing.Color]::FromArgb(150,150,150)
+    $lblPath.TextAlign = "MiddleLeft"
+    $lblPath.AutoEllipsis = $true
+    $inner.Controls.Add($lblPath)
+
+    # ── Stick group panels (LEFT STICK / RIGHT STICK) ───────────────────
+    function New-AcGroup {
+        param([string]$Title, [int]$X, [int]$Y, [int]$GW, [int]$GH)
+        $grp = New-Object System.Windows.Forms.Panel
+        $grp.Location  = New-Object System.Drawing.Point($X, $Y)
+        $grp.Size      = New-Object System.Drawing.Size($GW, $GH)
+        $grp.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+
+        $hdr = New-Object System.Windows.Forms.Label
+        $hdr.Location  = New-Object System.Drawing.Point(10, 8)
+        $hdr.Size      = New-Object System.Drawing.Size(($GW - 20), 24)
+        $hdr.Text      = $Title
+        $hdr.Font      = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
+        $hdr.ForeColor = [System.Drawing.Color]::Yellow
+        $grp.Controls.Add($hdr)
+
+        return $grp
+    }
+
+    # 4 rows per stick: UP (yMin), LEFT (xMin), RIGHT (xMax), DOWN (yMax)
+    function Add-AcRow {
+        param($Parent, [string]$LabelText, [int]$RowY)
+        $lbl = New-Object System.Windows.Forms.Label
+        $lbl.Location  = New-Object System.Drawing.Point(10, $RowY)
+        $lbl.Size      = New-Object System.Drawing.Size(130, 28)
+        $lbl.Text      = $LabelText
+        $lbl.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+        $lbl.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
+        $lbl.BackColor = [System.Drawing.Color]::Transparent
+        $lbl.TextAlign = "MiddleLeft"
+        $Parent.Controls.Add($lbl)
+
+        $num = New-Object System.Windows.Forms.NumericUpDown
+        $num.Location  = New-Object System.Drawing.Point(150, $RowY)
+        $num.Size      = New-Object System.Drawing.Size(110, 28)
+        $num.Minimum   = -100000
+        $num.Maximum   = 100000
+        $num.Increment = 10
+        $num.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+        # Keep Enabled=true so WinForms respects our colors; ReadOnly prevents editing until loaded
+        $num.ReadOnly  = $true
+        $num.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+        $num.ForeColor = [System.Drawing.Color]::FromArgb(90, 90, 90)
+        $num.BorderStyle = "FixedSingle"
+        $num.TextAlign = "Center"
+        $num.Enabled   = $true
+        $Parent.Controls.Add($num)
+
+        $lblKey = New-Object System.Windows.Forms.Label
+        $lblKey.Location  = New-Object System.Drawing.Point(270, $RowY)
+        $lblKey.Size      = New-Object System.Drawing.Size(70, 28)
+        $lblKey.Text      = ""
+        $lblKey.Font      = New-Object System.Drawing.Font("Segoe UI", 8)
+        $lblKey.ForeColor = [System.Drawing.Color]::FromArgb(110, 110, 110)
+        $lblKey.BackColor = [System.Drawing.Color]::Transparent
+        $lblKey.TextAlign = "MiddleLeft"
+        $Parent.Controls.Add($lblKey)
+
+        return $num, $lblKey
+    }
+
+    $groupW = ($W - 6 - 60) / 2
+    $groupH = 220
+
+    $grpLeft  = New-AcGroup -Title "LEFT STICK"  -X 20 -Y 240 -GW $groupW -GH $groupH
+    $grpRight = New-AcGroup -Title "RIGHT STICK" -X (20 + $groupW + 20) -Y 240 -GW $groupW -GH $groupH
+    $inner.Controls.Add($grpLeft)
+    $inner.Controls.Add($grpRight)
+
+    $L_up,    $L_upKey    = Add-AcRow -Parent $grpLeft  -LabelText "UP (yMin)"    -RowY 50
+    $L_left,  $L_leftKey  = Add-AcRow -Parent $grpLeft  -LabelText "LEFT (xMin)"  -RowY 90
+    $L_right, $L_rightKey = Add-AcRow -Parent $grpLeft  -LabelText "RIGHT (xMax)" -RowY 130
+    $L_down,  $L_downKey  = Add-AcRow -Parent $grpLeft  -LabelText "DOWN (yMax)"  -RowY 170
+
+    $R_up,    $R_upKey    = Add-AcRow -Parent $grpRight -LabelText "UP (yMin)"    -RowY 50
+    $R_left,  $R_leftKey  = Add-AcRow -Parent $grpRight -LabelText "LEFT (xMin)"  -RowY 90
+    $R_right, $R_rightKey = Add-AcRow -Parent $grpRight -LabelText "RIGHT (xMax)" -RowY 130
+    $R_down,  $R_downKey  = Add-AcRow -Parent $grpRight -LabelText "DOWN (yMax)"  -RowY 170
+
+    # ── Per-stick adjust buttons — directly under each group ─────────────
+    # Groups bottom: Y=200 + groupH=220 = 420; leave 8px gap
+    $stickLblH   = 20
+    $stickBtnY   = 240 + $groupH + 8 + $stickLblH + 4
+    $stickBtnH   = 36
+    $stickBtnGap = 6
+    # Each group is $groupW wide starting at X=20 (left) and X=20+groupW+20 (right)
+    $stickBtnW   = [int](($groupW - 18) / 2)   # 2 buttons per side with gap
+    $rightGrpX   = 20 + $groupW + 20
+
+    # Red "LEFT STICK" label above left buttons
+    $lblLeftStick = New-Object System.Windows.Forms.Label
+    $lblLeftStick.Location  = New-Object System.Drawing.Point(20, (240 + $groupH + 8))
+    $lblLeftStick.Size      = New-Object System.Drawing.Size($groupW, $stickLblH)
+    $lblLeftStick.Text      = "LEFT STICK"
+    $lblLeftStick.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblLeftStick.ForeColor = [System.Drawing.Color]::FromArgb(210, 50, 50)
+    $lblLeftStick.BackColor = [System.Drawing.Color]::Transparent
+    $lblLeftStick.TextAlign = "MiddleLeft"
+    $inner.Controls.Add($lblLeftStick)
+
+    # Red "RIGHT STICK" label above right buttons
+    $lblRightStick = New-Object System.Windows.Forms.Label
+    $lblRightStick.Location  = New-Object System.Drawing.Point($rightGrpX, (240 + $groupH + 8))
+    $lblRightStick.Size      = New-Object System.Drawing.Size($groupW, $stickLblH)
+    $lblRightStick.Text      = "RIGHT STICK"
+    $lblRightStick.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblRightStick.ForeColor = [System.Drawing.Color]::FromArgb(210, 50, 50)
+    $lblRightStick.BackColor = [System.Drawing.Color]::Transparent
+    $lblRightStick.TextAlign = "MiddleLeft"
+    $inner.Controls.Add($lblRightStick)
+
+    function New-StickBtn {
+        param([string]$Text, [int]$X, [int]$Y, [int]$W2, [int]$H2)
+        $b = New-Object System.Windows.Forms.Button
+        $b.Location  = New-Object System.Drawing.Point($X, $Y)
+        $b.Size      = New-Object System.Drawing.Size($W2, $H2)
+        $b.Text      = $Text
+        $b.FlatStyle = "Flat"
+        $b.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+        $b.ForeColor = [System.Drawing.Color]::Yellow
+        $b.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+        $b.FlatAppearance.BorderSize  = 1
+        $b.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+        $b.Cursor    = [System.Windows.Forms.Cursors]::Hand
+        $b.Enabled   = $false
+        return $b
+    }
+
+    # LEFT stick buttons (row 1: +10 | +20 / row 2: -10 | -20)
+    $btnL10  = New-StickBtn "+10"  (20)                                ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnL20  = New-StickBtn "+20"  (20 + $stickBtnW + $stickBtnGap)   ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnLm10 = New-StickBtn "-10"  (20)                                ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnLm20 = New-StickBtn "-20"  (20 + $stickBtnW + $stickBtnGap)   ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+
+    # RIGHT stick buttons — same layout shifted to right group X
+    $btnR10  = New-StickBtn "+10"  ($rightGrpX)                                ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnR20  = New-StickBtn "+20"  ($rightGrpX + $stickBtnW + $stickBtnGap)   ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnRm10 = New-StickBtn "-10"  ($rightGrpX)                                ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnRm20 = New-StickBtn "-20"  ($rightGrpX + $stickBtnW + $stickBtnGap)   ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+
+    foreach ($b in @($btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+        $inner.Controls.Add($b)
+    }
+
+    # ── AUTO ADJUST ALL buttons — below per-stick rows ───────────────────
+    $adjY = $stickBtnY + $stickBtnH*2 + 4 + 18   # below both per-stick rows + gap
+
+    $lblAdj = New-Object System.Windows.Forms.Label
+    $lblAdj.Location  = New-Object System.Drawing.Point(20, $adjY)
+    $lblAdj.Size      = New-Object System.Drawing.Size(($W - 46), 24)
+    $lblAdj.Text      = "AUTO ADJUST  (both sticks: yMin/xMin +delta, xMax/yMax -delta)"
+    $lblAdj.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $lblAdj.ForeColor = [System.Drawing.Color]::FromArgb(210, 50, 50)
+    $inner.Controls.Add($lblAdj)
+
+    $btnY = $adjY + 28
+    $btnAdjW = [int](($W - 6 - 40 - 30) / 4)
+
+    $btn10x = New-Object System.Windows.Forms.Button
+    $btn10x.Location  = New-Object System.Drawing.Point(20, $btnY)
+    $btn10x.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn10x.Text      = "10x  (+/-10 ALL)"
+    $btn10x.FlatStyle = "Flat"
+    $btn10x.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn10x.ForeColor = [System.Drawing.Color]::Yellow
+    $btn10x.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn10x.FlatAppearance.BorderSize = 1
+    $btn10x.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn10x.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn10x.Enabled   = $false
+    $inner.Controls.Add($btn10x)
+
+    $btn2x10 = New-Object System.Windows.Forms.Button
+    $btn2x10.Location  = New-Object System.Drawing.Point((20 + $btnAdjW + 10), $btnY)
+    $btn2x10.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn2x10.Text      = "2x+10  (+/-20 ALL)"
+    $btn2x10.FlatStyle = "Flat"
+    $btn2x10.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn2x10.ForeColor = [System.Drawing.Color]::Yellow
+    $btn2x10.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn2x10.FlatAppearance.BorderSize = 1
+    $btn2x10.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn2x10.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn2x10.Enabled   = $false
+    $inner.Controls.Add($btn2x10)
+
+    $btn1xMinus10 = New-Object System.Windows.Forms.Button
+    $btn1xMinus10.Location  = New-Object System.Drawing.Point((20 + 2*($btnAdjW + 10)), $btnY)
+    $btn1xMinus10.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn1xMinus10.Text      = "1x-10  (UNDO +/-10)"
+    $btn1xMinus10.FlatStyle = "Flat"
+    $btn1xMinus10.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn1xMinus10.ForeColor = [System.Drawing.Color]::Yellow
+    $btn1xMinus10.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn1xMinus10.FlatAppearance.BorderSize = 1
+    $btn1xMinus10.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn1xMinus10.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn1xMinus10.Enabled   = $false
+    $inner.Controls.Add($btn1xMinus10)
+
+    $btnReset = New-Object System.Windows.Forms.Button
+    $btnReset.Location  = New-Object System.Drawing.Point((20 + 3*($btnAdjW + 10)), $btnY)
+    $btnReset.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btnReset.Text      = "RESET TO LOADED"
+    $btnReset.FlatStyle = "Flat"
+    $btnReset.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btnReset.ForeColor = [System.Drawing.Color]::Yellow
+    $btnReset.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnReset.FlatAppearance.BorderSize = 1
+    $btnReset.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btnReset.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btnReset.Enabled   = $false
+    $inner.Controls.Add($btnReset)
+
+    foreach ($b in @($btnLoad,$btnSave,$btn10x,$btn2x10,$btn1xMinus10,$btnReset,
+                     $btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+        $b.Add_MouseEnter({ if($this.Enabled){ $this.BackColor=[System.Drawing.Color]::FromArgb(40,40,12) } })
+        $b.Add_MouseLeave({ if($this.Enabled){ $this.BackColor=[System.Drawing.Color]::FromArgb(20,20,20) } })
+    }
+    # EXIT uses its own FlatAppearance colours; just reset background on leave
+    $btnExit.Add_MouseLeave({ $btnExit.BackColor=[System.Drawing.Color]::FromArgb(28,8,8) })
+
+    # ── Log box (shows what was found / changed) ────────────────────────
+    $logY = $btnY + 48
+    $logBox = New-Object System.Windows.Forms.RichTextBox
+    $logBox.Location   = New-Object System.Drawing.Point(20, $logY)
+    $logBox.Size       = New-Object System.Drawing.Size(($W - 46), ($H - $logY - 30))
+    $logBox.BackColor  = [System.Drawing.Color]::FromArgb(18, 18, 18)
+    $logBox.ForeColor  = [System.Drawing.Color]::FromArgb(190, 190, 190)
+    $logBox.Font       = New-Object System.Drawing.Font("Consolas", 9)
+    $logBox.ReadOnly   = $true
+    $logBox.BorderStyle = "None"
+    $logBox.ScrollBars = "Vertical"
+    $inner.Controls.Add($logBox)
+
+    function Write-AcLog {
+        param([string]$Text, [string]$ColorName = "Gray")
+        $logBox.SelectionStart = $logBox.TextLength
+        $logBox.SelectionLength = 0
+        $logBox.SelectionColor = [System.Drawing.Color]::$ColorName
+        $logBox.AppendText("$Text`n")
+        $logBox.ScrollToCaret()
+    }
+
+    Write-AcLog "BETA - Auto Calibration Tool" "Yellow"
+    Write-AcLog "Load a JSON file containing xMin/yMin/xMax/yMax values." "Gray"
+    Write-AcLog "First complete set found = LEFT STICK. Last complete set found = RIGHT STICK." "Gray"
+    Write-AcLog "Load reads directly from the file you pick. Save writes back to that same file." "Cyan"
+    Write-AcLog "Pick any JSON file - Load and Save both operate on it directly." "Gray"
+
+    # ── Core: find xMin/yMin/xMax/yMax occurrences in raw text ──────────
+    function Find-AcMatches {
+        param([string]$Text)
+
+        $pattern = '("(?<key>xMin|yMin|xMax|yMax)"\s*:\s*)(?<val>-?\d+)'
+        $regexMatches = [regex]::Matches($Text, $pattern)
+
+        $found = New-Object System.Collections.Generic.List[object]
+        foreach ($m in $regexMatches) {
+            $valGroup = $m.Groups['val']
+            $found.Add([PSCustomObject]@{
+                Key    = $m.Groups['key'].Value
+                Value  = [int]$valGroup.Value
+                Start  = $valGroup.Index
+                Length = $valGroup.Length
+            })
+        }
+        return $found
+    }
+
+    function Group-AcSticks {
+        param($Found)
+
+        # Walk through matches, grouping into consecutive sets of the 4 keys.
+        $sets = New-Object System.Collections.Generic.List[object]
+        $current = @{}
+        foreach ($m in $Found) {
+            if ($current.ContainsKey($m.Key)) {
+                # Starting a new set (key repeats) -- flush current if it has anything
+                if ($current.Count -gt 0) {
+                    $sets.Add($current)
+                    $current = @{}
+                }
+            }
+            $current[$m.Key] = $m
+            if ($current.Count -eq 4) {
+                $sets.Add($current)
+                $current = @{}
+            }
+        }
+        if ($current.Count -gt 0) { $sets.Add($current) }
+        return $sets
+    }
+
+    # ── Helper to populate a row — defined at function scope so it works on every load ──
+    # FIX: was defined inside $btnLoad.Add_Click which caused scoping issues on 2nd+ load
+    function Set-AcRow {
+        param($Num, $KeyLbl, $Set, [string]$Key)
+        if ($Set.ContainsKey($Key)) {
+            $Num.Value     = [decimal]$Set[$Key].Value
+            $Num.ReadOnly  = $false
+            $Num.BackColor = [System.Drawing.Color]::FromArgb(22, 22, 22)
+            $Num.ForeColor = [System.Drawing.Color]::Yellow
+            $KeyLbl.Text   = $Key
+            $KeyLbl.ForeColor = [System.Drawing.Color]::FromArgb(130, 130, 130)
+        } else {
+            $Num.Value     = 0
+            $Num.ReadOnly  = $true
+            $Num.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+            $Num.ForeColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+            $KeyLbl.Text   = "(missing)"
+            $KeyLbl.ForeColor = [System.Drawing.Color]::FromArgb(80, 80, 80)
+        }
+        $Num.Refresh()  # force repaint so new value shows immediately
+    }
+
+    # ── LOAD JSON ─────────────────────────────────────────────────────────
+    $btnLoad.Add_Click({
+        $ofd = New-Object System.Windows.Forms.OpenFileDialog
+        $ofd.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+        $ofd.Title  = "Select calibration JSON file"
+        if ($ofd.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+
+        try {
+            $text = [System.IO.File]::ReadAllText($ofd.FileName)
+        } catch {
+            [System.Windows.Forms.MessageBox]::Show("Could not read file:`n$_","Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Error)
+            return
+        }
+
+        $found = Find-AcMatches -Text $text
+        if ($found.Count -eq 0) {
+            Write-AcLog "No xMin/yMin/xMax/yMax values found in this file." "Red"
+            [System.Windows.Forms.MessageBox]::Show("No xMin/yMin/xMax/yMax keys were found in this JSON file.","Nothing Found",
+                [System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Warning)
+            return
+        }
+
+        $sets = Group-AcSticks -Found $found
+        if ($sets.Count -eq 0) {
+            Write-AcLog "Could not group values into complete sets." "Red"
+            return
+        }
+
+        # Load reads source into memory. Save writes to LoadThisFileIntoMarius.json.
+        $fileDir           = [System.IO.Path]::GetDirectoryName($ofd.FileName)
+        $script:acRawText  = $text
+        $script:acFilePath = [System.IO.Path]::Combine($fileDir, "LoadThisFileIntoMarius.json")
+
+        $lblPath.Text      = "LoadThisFileIntoMarius.json  (source: $($ofd.SafeFileName))"
+        $lblStatus.Text    = "  [BETA]  LOADED  |  $($sets.Count) set(s) found - edit values then SAVE CONFIG"
+
+        $leftSet  = $sets[0]
+        $rightSet = $sets[$sets.Count - 1]
+
+        # FIX: reset all spinners to 0 before populating — prevents stale values
+        # from a previously loaded file sticking around if a key is missing in the new one
+        foreach ($ctrl in @($L_up,$L_left,$L_right,$L_down,$R_up,$R_left,$R_right,$R_down)) {
+            $ctrl.Value = 0
+        }
+
+        Set-AcRow $L_up    $L_upKey    $leftSet  "yMin"
+        Set-AcRow $L_left  $L_leftKey  $leftSet  "xMin"
+        Set-AcRow $L_right $L_rightKey $leftSet  "xMax"
+        Set-AcRow $L_down  $L_downKey  $leftSet  "yMax"
+
+        Set-AcRow $R_up    $R_upKey    $rightSet "yMin"
+        Set-AcRow $R_left  $R_leftKey  $rightSet "xMin"
+        Set-AcRow $R_right $R_rightKey $rightSet "xMax"
+        Set-AcRow $R_down  $R_downKey  $rightSet "yMax"
+
+        # Store matches for save (use object refs so live edits via NumericUpDown are picked up later)
+        $script:acLeftSet  = $leftSet
+        $script:acRightSet = $rightSet
+        $script:acAllFound = $found
+
+        # FIX: snapshot AFTER Set-AcRow calls so RESET restores the actual new file's values
+        $script:acLoadedValues = @{
+            L_up    = $L_up.Value;    L_left  = $L_left.Value;  L_right = $L_right.Value;  L_down  = $L_down.Value
+            R_up    = $R_up.Value;    R_left  = $R_left.Value;  R_right = $R_right.Value;  R_down  = $R_down.Value
+        }
+
+        $btnSave.Enabled = $true
+        $btnSave.ForeColor = [System.Drawing.Color]::Yellow
+        $btnSave.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+        $btn10x.Enabled = $true
+        $btn10x.ForeColor = [System.Drawing.Color]::Yellow
+        $btn2x10.Enabled = $true
+        $btn2x10.ForeColor = [System.Drawing.Color]::Yellow
+        $btn1xMinus10.Enabled = $true
+        $btn1xMinus10.ForeColor = [System.Drawing.Color]::Yellow
+        $btnReset.Enabled = $true
+        $btnReset.ForeColor = [System.Drawing.Color]::Yellow
+        foreach ($b in @($btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+            $b.Enabled   = $true
+            $b.ForeColor = [System.Drawing.Color]::Yellow
+        }
+
+        Write-AcLog "Loaded: $($ofd.FileName)" "Yellow"
+        Write-AcLog "Found $($found.Count) value(s) across $($sets.Count) set(s)." "Gray"
+        if ($leftSet.Count -lt 4) { Write-AcLog "WARNING: LEFT STICK set is incomplete (missing keys)." "Orange" }
+        if ($rightSet.Count -lt 4 -and $sets.Count -gt 1) { Write-AcLog "WARNING: RIGHT STICK set is incomplete (missing keys)." "Orange" }
+        if ($sets.Count -eq 1) { Write-AcLog "Only one set found - LEFT and RIGHT show the same values. Saving will update that single set." "Orange" }
+        Write-AcLog "  LEFT  -> yMin=$($leftSet['yMin'].Value)  xMin=$($leftSet['xMin'].Value)  xMax=$($leftSet['xMax'].Value)  yMax=$($leftSet['yMax'].Value)" "Gray"
+        Write-AcLog "  RIGHT -> yMin=$($rightSet['yMin'].Value)  xMin=$($rightSet['xMin'].Value)  xMax=$($rightSet['xMax'].Value)  yMax=$($rightSet['yMax'].Value)" "Gray"
+    })
+
+    # ── Auto-adjust: apply delta to mins (+delta) and maxes (-delta) ────────
+    function Apply-AcDelta {
+        param([int]$Delta)
+        if (-not $script:acFilePath) { return }
+
+        # Snapshot "before" values for the log
+        $before = @{
+            L_up=$L_up.Value; L_left=$L_left.Value; L_right=$L_right.Value; L_down=$L_down.Value
+            R_up=$R_up.Value; R_left=$R_left.Value; R_right=$R_right.Value; R_down=$R_down.Value
+        }
+
+        # yMin/xMin increase by Delta; xMax/yMax decrease by Delta
+        $L_up.Value    = [decimal][Math]::Min([Math]::Max(($L_up.Value    + $Delta), $L_up.Minimum),    $L_up.Maximum)
+        $L_left.Value  = [decimal][Math]::Min([Math]::Max(($L_left.Value  + $Delta), $L_left.Minimum),  $L_left.Maximum)
+        $L_right.Value = [decimal][Math]::Min([Math]::Max(($L_right.Value - $Delta), $L_right.Minimum), $L_right.Maximum)
+        $L_down.Value  = [decimal][Math]::Min([Math]::Max(($L_down.Value  - $Delta), $L_down.Minimum),  $L_down.Maximum)
+
+        $R_up.Value    = [decimal][Math]::Min([Math]::Max(($R_up.Value    + $Delta), $R_up.Minimum),    $R_up.Maximum)
+        $R_left.Value  = [decimal][Math]::Min([Math]::Max(($R_left.Value  + $Delta), $R_left.Minimum),  $R_left.Maximum)
+        $R_right.Value = [decimal][Math]::Min([Math]::Max(($R_right.Value - $Delta), $R_right.Minimum), $R_right.Maximum)
+        $R_down.Value  = [decimal][Math]::Min([Math]::Max(($R_down.Value  - $Delta), $R_down.Minimum),  $R_down.Maximum)
+
+        Write-AcLog "Applied delta $Delta (yMin/xMin +, xMax/yMax -) to both sticks:" "Yellow"
+        Write-AcLog "  LEFT  UP $($before.L_up)->$($L_up.Value)  LEFT $($before.L_left)->$($L_left.Value)  RIGHT $($before.L_right)->$($L_right.Value)  DOWN $($before.L_down)->$($L_down.Value)" "Gray"
+        Write-AcLog "  RIGHT UP $($before.R_up)->$($R_up.Value)  LEFT $($before.R_left)->$($R_left.Value)  RIGHT $($before.R_right)->$($R_right.Value)  DOWN $($before.R_down)->$($R_down.Value)" "Gray"
+    }
+
+    $btn10x.Add_Click({ Apply-AcDelta -Delta 10 })
+    $btn2x10.Add_Click({ Apply-AcDelta -Delta 20 })
+    $btn1xMinus10.Add_Click({ Apply-AcDelta -Delta -10 })
+
+    # ── Per-stick delta (only touches one stick) ─────────────────────────
+    function Apply-AcDeltaStick {
+        param([int]$Delta, [string]$Stick)
+        if (-not $script:acFilePath) { return }
+
+        if ($Stick -eq 'LEFT') {
+            $before = @{ up=$L_up.Value; left=$L_left.Value; right=$L_right.Value; down=$L_down.Value }
+            $L_up.Value    = [decimal][Math]::Min([Math]::Max(($L_up.Value    + $Delta), $L_up.Minimum),    $L_up.Maximum)
+            $L_left.Value  = [decimal][Math]::Min([Math]::Max(($L_left.Value  + $Delta), $L_left.Minimum),  $L_left.Maximum)
+            $L_right.Value = [decimal][Math]::Min([Math]::Max(($L_right.Value - $Delta), $L_right.Minimum), $L_right.Maximum)
+            $L_down.Value  = [decimal][Math]::Min([Math]::Max(($L_down.Value  - $Delta), $L_down.Minimum),  $L_down.Maximum)
+            Write-AcLog "Applied delta $Delta to LEFT stick only (yMin/xMin +, xMax/yMax -):" "Yellow"
+            Write-AcLog "  UP $($before.up)->$($L_up.Value)  LEFT $($before.left)->$($L_left.Value)  RIGHT $($before.right)->$($L_right.Value)  DOWN $($before.down)->$($L_down.Value)" "Gray"
+        } elseif ($Stick -eq 'RIGHT') {
+            $before = @{ up=$R_up.Value; left=$R_left.Value; right=$R_right.Value; down=$R_down.Value }
+            $R_up.Value    = [decimal][Math]::Min([Math]::Max(($R_up.Value    + $Delta), $R_up.Minimum),    $R_up.Maximum)
+            $R_left.Value  = [decimal][Math]::Min([Math]::Max(($R_left.Value  + $Delta), $R_left.Minimum),  $R_left.Maximum)
+            $R_right.Value = [decimal][Math]::Min([Math]::Max(($R_right.Value - $Delta), $R_right.Minimum), $R_right.Maximum)
+            $R_down.Value  = [decimal][Math]::Min([Math]::Max(($R_down.Value  - $Delta), $R_down.Minimum),  $R_down.Maximum)
+            Write-AcLog "Applied delta $Delta to RIGHT stick only (yMin/xMin +, xMax/yMax -):" "Yellow"
+            Write-AcLog "  UP $($before.up)->$($R_up.Value)  LEFT $($before.left)->$($R_left.Value)  RIGHT $($before.right)->$($R_right.Value)  DOWN $($before.down)->$($R_down.Value)" "Gray"
+        }
+    }
+
+    $btnL10.Add_Click({  Apply-AcDeltaStick -Delta  10 -Stick 'LEFT'  })
+    $btnL20.Add_Click({  Apply-AcDeltaStick -Delta  20 -Stick 'LEFT'  })
+    $btnLm10.Add_Click({ Apply-AcDeltaStick -Delta -10 -Stick 'LEFT'  })
+    $btnLm20.Add_Click({ Apply-AcDeltaStick -Delta -20 -Stick 'LEFT'  })
+    $btnR10.Add_Click({  Apply-AcDeltaStick -Delta  10 -Stick 'RIGHT' })
+    $btnR20.Add_Click({  Apply-AcDeltaStick -Delta  20 -Stick 'RIGHT' })
+    $btnRm10.Add_Click({ Apply-AcDeltaStick -Delta -10 -Stick 'RIGHT' })
+    $btnRm20.Add_Click({ Apply-AcDeltaStick -Delta -20 -Stick 'RIGHT' })
+
+    # ── RESET TO LOADED: restore the values as they were when the file was loaded ──
+    $btnReset.Add_Click({
+        if (-not $script:acLoadedValues) { return }
+        $v = $script:acLoadedValues
+        $L_up.Value    = $v.L_up;    $L_left.Value  = $v.L_left;  $L_right.Value = $v.L_right;  $L_down.Value  = $v.L_down
+        $R_up.Value    = $v.R_up;    $R_left.Value  = $v.R_left;  $R_right.Value = $v.R_right;  $R_down.Value  = $v.R_down
+        Write-AcLog "Reset all 8 values back to as-loaded." "Yellow"
+    })
+
+    # ── SAVE JSON ─────────────────────────────────────────────────────────
+    $btnSave.Add_Click({
+        if (-not $script:acFilePath -or -not $script:acRawText) { return }
+
+        # Read spinner values directly
+        $leftVals  = @{ yMin=[int]$L_up.Value; xMin=[int]$L_left.Value; xMax=[int]$L_right.Value; yMax=[int]$L_down.Value }
+        $rightVals = @{ yMin=[int]$R_up.Value; xMin=[int]$R_left.Value; xMax=[int]$R_right.Value; yMax=[int]$R_down.Value }
+
+        # FIX: always re-scan fresh offsets from the current working text instead of
+        # using $script:acAllFound which holds stale positions from load time.
+        # Offsets drift whenever a number changes digit length (e.g. 480->1000),
+        # causing subsequent saves to corrupt the file or write to the wrong position.
+        $freshFound = Find-AcMatches -Text $script:acRawText
+        $sets = Group-AcSticks -Found $freshFound
+        if ($sets.Count -eq 0) {
+            Write-AcLog "ERROR: Could not find calibration keys in working text." "Red"
+            return
+        }
+        $leftSet  = $sets[0]
+        $rightSet = $sets[$sets.Count - 1]
+
+        # Apply replacements back-to-front by offset so earlier positions stay valid
+        $ops = New-Object System.Collections.Generic.List[object]
+        foreach ($key in @("yMin","xMin","xMax","yMax")) {
+            if ($leftSet.ContainsKey($key)) {
+                $m = $leftSet[$key]
+                $ops.Add([PSCustomObject]@{ Start=$m.Start; Length=$m.Length; NewText=[string]$leftVals[$key] })
+            }
+            if ($sets.Count -gt 1 -and $rightSet.ContainsKey($key)) {
+                $m = $rightSet[$key]
+                $ops.Add([PSCustomObject]@{ Start=$m.Start; Length=$m.Length; NewText=[string]$rightVals[$key] })
+            }
+        }
+
+        $sortedOps = $ops | Sort-Object -Property Start -Descending
+        $newText = $script:acRawText
+        foreach ($op in $sortedOps) {
+            $newText = $newText.Substring(0, $op.Start) + $op.NewText + $newText.Substring($op.Start + $op.Length)
+        }
+
+        try {
+            [System.IO.File]::WriteAllText($script:acFilePath, $newText, [System.Text.Encoding]::UTF8)  # exact bytes, no BOM/newline drift
+            $script:acRawText  = $newText
+            $script:acAllFound = Find-AcMatches -Text $newText
+            # Verify: re-read the file we just wrote and confirm values match spinners
+            $verify = [System.IO.File]::ReadAllText($script:acFilePath)
+            $vFound = Find-AcMatches -Text $verify
+            $vSets  = Group-AcSticks -Found $vFound
+            $vL = $vSets[0]; $vR = $vSets[$vSets.Count - 1]
+            Write-AcLog "Saved to: $($script:acFilePath)" "Yellow"
+            Write-AcLog "  WRITTEN LEFT  -> yMin=$($vL['yMin'].Value)  xMin=$($vL['xMin'].Value)  xMax=$($vL['xMax'].Value)  yMax=$($vL['yMax'].Value)" "Gray"
+            Write-AcLog "  WRITTEN RIGHT -> yMin=$($vR['yMin'].Value)  xMin=$($vR['xMin'].Value)  xMax=$($vR['xMax'].Value)  yMax=$($vR['yMax'].Value)" "Gray"
+            Write-AcLog "  SPINNER LEFT  -> yMin=$([int]$L_up.Value)  xMin=$([int]$L_left.Value)  xMax=$([int]$L_right.Value)  yMax=$([int]$L_down.Value)" "Cyan"
+            Write-AcLog "  SPINNER RIGHT -> yMin=$([int]$R_up.Value)  xMin=$([int]$R_left.Value)  xMax=$([int]$R_right.Value)  yMax=$([int]$R_down.Value)" "Cyan"
+            Write-AcLog "  Your original source file is still untouched." "Cyan"
+            $lblStatus.Text = "  [BETA]  SAVED  |  $($ops.Count) value(s) written"
+        } catch {
+            Write-AcLog "ERROR saving file: $_" "Red"
+            [System.Windows.Forms.MessageBox]::Show("Could not save file:`n$_","Error",
+                [System.Windows.Forms.MessageBoxButtons]::OK,[System.Windows.Forms.MessageBoxIcon]::Error)
+        }
+    })
+
+    $dlg.Add_KeyDown({ param($s,$e); if($e.KeyCode -eq "Escape"){ $dlg.Close() } })
+    [void]$dlg.ShowDialog()
+}
 
 function Show-UsbAnalyzer {
     $analyzerForm = New-Object System.Windows.Forms.Form
@@ -1134,7 +1889,7 @@ function Show-GameBarDialog {
     $dlg.StartPosition   = "CenterScreen"
     $dlg.FormBorderStyle = "None"
     $dlg.BackColor       = [System.Drawing.Color]::Yellow   # RGB border will replace this
-    $dlg.TopMost         = $true
+    $dlg.TopMost         = $false
 
     # Drag state
     $script:gbDrag = $false; $script:gbDX = 0; $script:gbDY = 0
@@ -1516,7 +2271,7 @@ function Save-Settings {
         $vol = if ($null -ne $script:MusicVolume) { $script:MusicVolume } else { 38 }
 
         if (-not (Test-Path $script:SettingsPath)) {
-            # File doesn't exist yet — create it fresh with defaults + comments
+            # File doesn't exist yet - create it fresh with defaults + comments
             $lines = @(
                 "MusicEnabled=$val",
                 "MusicVolume=$vol",
@@ -1526,7 +2281,7 @@ function Save-Settings {
             )
             Set-Content -Path $script:SettingsPath -Value $lines -Encoding UTF8
         } else {
-            # File exists — surgically update only MusicEnabled and MusicVolume lines.
+            # File exists - surgically update only MusicEnabled and MusicVolume lines.
             # All other content (comments, custom keys, whitespace) is preserved.
             $raw = Get-Content $script:SettingsPath
             $updatedEnabled = $false
@@ -1743,7 +2498,7 @@ $headerPanel.Controls.Add($titlePicBox)
 $mainPanel.Controls.Add($headerPanel)
 
 # ============================================================================
-# PAGE NAVIGATION HELPERS — swap tiles in-place on the MAIN window
+# PAGE NAVIGATION HELPERS - swap tiles in-place on the MAIN window
 # ============================================================================
 
 # Collect main-menu tile buttons after they are built (populated below)
@@ -1759,7 +2514,7 @@ function Show-AppInfoDialog {
     $dlg.StartPosition   = "CenterScreen"
     $dlg.FormBorderStyle = "None"
     $dlg.BackColor       = [System.Drawing.Color]::Yellow
-    $dlg.TopMost         = $true
+    $dlg.TopMost         = $false
 
     $script:aiDrag = $false; $script:aiDX = 0; $script:aiDY = 0
 
@@ -1993,7 +2748,7 @@ function Show-TroubleshootingDialog {
     $dlg.StartPosition   = "CenterScreen"
     $dlg.FormBorderStyle = "None"
     $dlg.BackColor       = [System.Drawing.Color]::Yellow
-    $dlg.TopMost         = $true
+    $dlg.TopMost         = $false
 
     $script:tsDrag = $false; $script:tsDX = 0; $script:tsDY = 0
 
@@ -2211,6 +2966,7 @@ function Show-ToolboxPage {
         $tbItems = @(
             @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
             @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
+            @{Name="Auto Calibration";                    URL="AUTO_CALIBRATE";        Desc="Edit stick calibration JSON values (xMin/yMin/xMax/yMax)"; Admin="BETA"},
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
             @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
             @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
@@ -2261,6 +3017,7 @@ function Show-ToolboxPage {
                 if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
                 if ($tu -eq "DEEPPOLL") { Show-DeepPoll; return }
+                if ($tu -eq "AUTO_CALIBRATE") { Show-AutoCalibrate; return }
                 if ($tu -eq "BETA_PORTAL") {
                     $targetUrl = "https://beta.mariusheier.com/"
                     $defaultBrowser = Get-DefaultBrowser
@@ -2569,7 +3326,7 @@ $script:rgbTimer.Add_Tick({
 
 $script:rgbTimer.Start()
 
-# ── SETTINGS FILE WATCHER — hot-reload when Settings.ini is edited externally ─
+# ── SETTINGS FILE WATCHER - hot-reload when Settings.ini is edited externally ─
 $script:settingsWatcher = $null
 try {
     $script:settingsWatcher = New-Object System.IO.FileSystemWatcher
@@ -2618,7 +3375,7 @@ $versionLabel.TextAlign = "MiddleLeft"
 $versionLabel.BackColor = [System.Drawing.Color]::Black
 $mainPanel.Controls.Add($versionLabel)
 
-# Credits — full panel width, MiddleCenter, sent to back so controls above it get clicks
+# Credits - full panel width, MiddleCenter, sent to back so controls above it get clicks
 $creditsLabel = New-Object System.Windows.Forms.Label
 $creditsLabel.Location = New-Object System.Drawing.Point(14, 800)
 $creditsLabel.Size = New-Object System.Drawing.Size(766, 28)
@@ -2635,7 +3392,7 @@ $versionLabel.BringToFront()
 # Right-aligned: [speaker 24px][4][slider 100px][4][pct 34px] = 166px, X=678..844
 $script:volSliderDragging = $false
 
-# ── Speaker toggle — GDI+ painted, no Unicode dependency ────────────────────
+# ── Speaker toggle - GDI+ painted, no Unicode dependency ────────────────────
 $muteBtn = New-Object System.Windows.Forms.Button
 $muteBtn.Location  = New-Object System.Drawing.Point(678, 800)
 $muteBtn.Size      = New-Object System.Drawing.Size(24, 24)
