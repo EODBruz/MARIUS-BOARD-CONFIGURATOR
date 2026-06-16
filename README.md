@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.7.3-yellow)
+![Version](https://img.shields.io/badge/version-3.7.4-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -328,7 +328,7 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.7.3). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.7.4). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -369,6 +369,10 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 ---
 
 ## 📋 Changelog
+
+### v3.7.4
+- General improvements and stability updates
+- Added **Auto Calibration (Beta)** — new tool in Marius Toolbox allowing you to load, edit, and save your controller's calibration config (xMin/yMin/xMax/yMax) to yield better stick results
 
 ### v3.7.3
 - Added **DeepPoll** from MARIUS — launches in a separate CMD window outside the app to avoid administrator permission conflicts
