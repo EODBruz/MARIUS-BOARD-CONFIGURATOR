@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.4
+    MARIUS Board Configurator V3.7.5
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7.4
+    Version: 3.7.5
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.4
+    Script Version 3.7.5
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.4"
+$script:CurrentVersion = "3.7.5"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -488,10 +488,39 @@ function Get-BrowserPath {
 
 function Show-DeepPoll {
     $script:dpExe = "$script:InstallDir\DeepPoll.exe"
-    $dpUrl = "https://github.com/MariusHeier/deeppoll/releases/latest/download/DeepPoll.exe"
+    $dpUrl        = "https://github.com/MariusHeier/deeppoll/releases/latest/download/DeepPoll.exe"
+    $dpApiUrl     = "https://api.github.com/repos/MariusHeier/deeppoll/releases/latest"
 
-    # ── Download if not cached ─────────────────────────────────────────────
+    # ── Check if an update is available ───────────────────────────────────
+    $needDownload = $false
     if (-not (Test-Path $script:dpExe)) {
+        $needDownload = $true
+    } else {
+        $cached = Get-IniToolVer "DeepPoll"
+        $actualSize = (Get-Item $script:dpExe).Length
+
+        if ($cached.Size -ge 0 -and $actualSize -ne $cached.Size) {
+            # Exe size doesn't match what we recorded — force re-download
+            $needDownload = $true
+        } else {
+            # Size matches (or no record yet) — check GitHub for a newer tag
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $wcVer = New-Object System.Net.WebClient
+                $wcVer.Headers.Add("User-Agent", "MARIUS-Updater")
+                $json      = $wcVer.DownloadString($dpApiUrl)
+                $latestTag = (($json -split '"tag_name"\s*:\s*"')[1] -split '"')[0]
+                if ($latestTag.Trim() -ne $cached.Tag.Trim()) {
+                    $needDownload = $true
+                }
+            } catch {
+                # If version check fails, keep existing exe
+            }
+        }
+    }
+
+    # ── Download / update if needed ────────────────────────────────────────
+    if ($needDownload) {
 
         $script:dlProgress = -1   # -1 = indeterminate, 0-100 = determinate
 
@@ -522,7 +551,7 @@ function Show-DeepPoll {
 
         # ── Subtitle / status line ─────────────────────────────────────────
         $dlSub = New-Object System.Windows.Forms.Label
-        $dlSub.Text      = "Downloading DeepPoll.exe..."
+        $dlSub.Text      = if (Test-Path $script:dpExe) { "Updating DeepPoll.exe..." } else { "Downloading DeepPoll.exe..." }
         $dlSub.ForeColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
         $dlSub.Font      = New-Object System.Drawing.Font("Segoe UI", 7)
         $dlSub.AutoSize  = $false
@@ -650,6 +679,17 @@ function Show-DeepPoll {
 
             $wc.DownloadFile($dpUrl, $script:dpExe)
 
+            # Save version tag + file size into Settings.ini
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $wcTag = New-Object System.Net.WebClient
+                $wcTag.Headers.Add("User-Agent", "MARIUS-Updater")
+                $jsonTag  = $wcTag.DownloadString($dpApiUrl)
+                $savedTag = (($jsonTag -split '"tag_name"\s*:\s*"')[1] -split '"')[0]
+                $exeSize  = (Get-Item $script:dpExe).Length
+                Save-IniToolVer "DeepPoll" $savedTag $exeSize
+            } catch {}
+
             # ── Complete flash ─────────────────────────────────────────────
             $dlTimer.Stop()
             $script:dlProgress = 100
@@ -679,6 +719,246 @@ function Show-DeepPoll {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName        = "cmd.exe"
     $psi.Arguments       = "/k `"$script:dpExe`""
+    $psi.WindowStyle     = [System.Diagnostics.ProcessWindowStyle]::Normal
+    $psi.UseShellExecute = $true
+    $psi.Verb            = "runas"
+    [System.Diagnostics.Process]::Start($psi) | Out-Null
+}
+
+
+function Show-DeepLog {
+    $script:dlgExe = "$script:InstallDir\DeepLog.exe"
+    $dlgUrl        = "https://github.com/MariusHeier/deeplog/releases/latest/download/DeepLog.exe"
+    $dlgApiUrl     = "https://api.github.com/repos/MariusHeier/deeplog/releases/latest"
+
+    # ── Check if an update is available ───────────────────────────────────
+    $needDownload = $false
+    if (-not (Test-Path $script:dlgExe)) {
+        $needDownload = $true
+    } else {
+        $cached = Get-IniToolVer "DeepLog"
+        $actualSize = (Get-Item $script:dlgExe).Length
+
+        if ($cached.Size -ge 0 -and $actualSize -ne $cached.Size) {
+            # Exe size doesn't match what we recorded — force re-download
+            $needDownload = $true
+        } else {
+            # Size matches (or no record yet) — check GitHub for a newer tag
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $wcVer = New-Object System.Net.WebClient
+                $wcVer.Headers.Add("User-Agent", "MARIUS-Updater")
+                $json      = $wcVer.DownloadString($dlgApiUrl)
+                $latestTag = (($json -split '"tag_name"\s*:\s*"')[1] -split '"')[0]
+                if ($latestTag.Trim() -ne $cached.Tag.Trim()) {
+                    $needDownload = $true
+                }
+            } catch {
+                # If version check fails, keep existing exe
+            }
+        }
+    }
+
+    # ── Download / update if needed ────────────────────────────────────────
+    if ($needDownload) {
+
+        $script:dlProgress = -1   # -1 = indeterminate, 0-100 = determinate
+
+        # ── Outer form: frameless, yellow 2px border via BackColor ─────────
+        $dlForm = New-Object System.Windows.Forms.Form
+        $dlForm.Text            = ""
+        $dlForm.Size            = New-Object System.Drawing.Size(360, 140)
+        $dlForm.StartPosition   = "CenterScreen"
+        $dlForm.FormBorderStyle = "None"
+        $dlForm.BackColor       = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlForm.TopMost         = $false
+
+        # ── Inner dark panel ───────────────────────────────────────────────
+        $dlInner = New-Object System.Windows.Forms.Panel
+        $dlInner.Location  = New-Object System.Drawing.Point(2, 2)
+        $dlInner.Size      = New-Object System.Drawing.Size(356, 136)
+        $dlInner.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+
+        # ── Title ──────────────────────────────────────────────────────────
+        $dlTitle = New-Object System.Windows.Forms.Label
+        $dlTitle.Text      = "DEEPLOG"
+        $dlTitle.ForeColor = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlTitle.Font      = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+        $dlTitle.AutoSize  = $false
+        $dlTitle.Size      = New-Object System.Drawing.Size(316, 28)
+        $dlTitle.Location  = New-Object System.Drawing.Point(20, 16)
+        $dlTitle.TextAlign = "MiddleLeft"
+
+        # ── Subtitle / status line ─────────────────────────────────────────
+        $dlSub = New-Object System.Windows.Forms.Label
+        $dlSub.Text      = if (Test-Path $script:dlgExe) { "Updating DeepLog.exe..." } else { "Downloading DeepLog.exe..." }
+        $dlSub.ForeColor = [System.Drawing.Color]::FromArgb(160, 160, 160)
+        $dlSub.Font      = New-Object System.Drawing.Font("Segoe UI", 7)
+        $dlSub.AutoSize  = $false
+        $dlSub.Size      = New-Object System.Drawing.Size(316, 16)
+        $dlSub.Location  = New-Object System.Drawing.Point(20, 50)
+        $dlSub.TextAlign = "MiddleLeft"
+
+        # ── Custom-painted progress track ──────────────────────────────────
+        $dlTrack = New-Object System.Windows.Forms.Panel
+        $dlTrack.Location  = New-Object System.Drawing.Point(20, 76)
+        $dlTrack.Size      = New-Object System.Drawing.Size(268, 6)
+        $dlTrack.BackColor = [System.Drawing.Color]::FromArgb(10, 10, 10)
+
+        $dlTrack.Add_Paint({
+            param($s, $ev)
+            $g   = $ev.Graphics
+            $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::None
+            $w   = $s.Width
+            $h   = $s.Height
+            $pct = $script:dlProgress
+
+            # Track background
+            $bg = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(38, 38, 38))
+            $g.FillRectangle($bg, 0, 0, $w, $h)
+            $bg.Dispose()
+
+            if ($pct -lt 0) {
+                # Indeterminate: animated yellow pulse
+                $blockW = [int]($w * 0.35)
+                $tick   = [int]([System.Environment]::TickCount / 8) % ($w + $blockW)
+                $x0     = $tick - $blockW
+                $rect   = New-Object System.Drawing.Rectangle($x0, 0, $blockW, $h)
+                try {
+                    $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+                        $rect,
+                        [System.Drawing.Color]::FromArgb(60, 200, 160, 0),
+                        [System.Drawing.Color]::FromArgb(255, 220, 0),
+                        [System.Drawing.Drawing2D.LinearGradientMode]::Horizontal
+                    )
+                    $g.FillRectangle($grad, $rect)
+                    $grad.Dispose()
+                } catch {
+                    $fb = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 220, 0))
+                    $g.FillRectangle($fb, $rect)
+                    $fb.Dispose()
+                }
+            } else {
+                # Determinate fill
+                $fillW = [int]($w * $pct / 100.0)
+                if ($fillW -gt 0) {
+                    $fillRect = New-Object System.Drawing.Rectangle(0, 0, $fillW, $h)
+                    try {
+                        $fillGrad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+                            $fillRect,
+                            [System.Drawing.Color]::FromArgb(255, 235, 30),
+                            [System.Drawing.Color]::FromArgb(200, 170, 0),
+                            [System.Drawing.Drawing2D.LinearGradientMode]::Vertical
+                        )
+                        $g.FillRectangle($fillGrad, $fillRect)
+                        $fillGrad.Dispose()
+                    } catch {
+                        $fb2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 220, 0))
+                        $g.FillRectangle($fb2, $fillRect)
+                        $fb2.Dispose()
+                    }
+                }
+            }
+        })
+
+        # ── Percent label (right of bar) ───────────────────────────────────
+        $dlPct = New-Object System.Windows.Forms.Label
+        $dlPct.Text      = ""
+        $dlPct.ForeColor = [System.Drawing.Color]::FromArgb(255, 220, 0)
+        $dlPct.Font      = New-Object System.Drawing.Font("Segoe UI", 7, [System.Drawing.FontStyle]::Bold)
+        $dlPct.AutoSize  = $false
+        $dlPct.Size      = New-Object System.Drawing.Size(48, 14)
+        $dlPct.Location  = New-Object System.Drawing.Point(296, 71)
+        $dlPct.TextAlign = "MiddleRight"
+
+        # ── KB transferred label ───────────────────────────────────────────
+        $dlStatus = New-Object System.Windows.Forms.Label
+        $dlStatus.Text      = "Connecting..."
+        $dlStatus.ForeColor = [System.Drawing.Color]::FromArgb(75, 75, 75)
+        $dlStatus.Font      = New-Object System.Drawing.Font("Segoe UI", 7)
+        $dlStatus.AutoSize  = $false
+        $dlStatus.Size      = New-Object System.Drawing.Size(316, 14)
+        $dlStatus.Location  = New-Object System.Drawing.Point(20, 96)
+        $dlStatus.TextAlign = "MiddleLeft"
+
+        # ── Marquee timer (~60 fps repaint) ───────────────────────────────
+        $dlTimer = New-Object System.Windows.Forms.Timer
+        $dlTimer.Interval = 16
+        $dlTimer.Add_Tick({ $dlTrack.Invalidate() })
+
+        $dlInner.Controls.AddRange(@($dlTitle, $dlSub, $dlTrack, $dlPct, $dlStatus))
+        $dlForm.Controls.Add($dlInner)
+        $dlForm.Show()
+        $dlForm.Refresh()
+
+        $script:dlProgress = -1
+        $dlTimer.Start()
+
+        # ── Download ───────────────────────────────────────────────────────
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $wc = New-Object System.Net.WebClient
+            $wc.Headers.Add("Cache-Control", "no-cache")
+
+            $wc.add_DownloadProgressChanged({
+                param($s, $e)
+                if ($e.TotalBytesToReceive -gt 0) {
+                    $script:dlProgress = $e.ProgressPercentage
+                    $dlTimer.Stop()
+                    $recv  = [Math]::Round($e.BytesReceived       / 1KB)
+                    $total = [Math]::Round($e.TotalBytesToReceive / 1KB)
+                    $dlStatus.Text = "$recv KB  /  $total KB"
+                    $dlPct.Text    = "$($e.ProgressPercentage)%"
+                } else {
+                    $recv          = [Math]::Round($e.BytesReceived / 1KB)
+                    $dlStatus.Text = "$recv KB downloaded"
+                }
+                $dlTrack.Invalidate()
+                $dlForm.Refresh()
+            })
+
+            $wc.DownloadFile($dlgUrl, $script:dlgExe)
+
+            # Save version tag + file size into Settings.ini
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $wcTag = New-Object System.Net.WebClient
+                $wcTag.Headers.Add("User-Agent", "MARIUS-Updater")
+                $jsonTag  = $wcTag.DownloadString($dlgApiUrl)
+                $savedTag = (($jsonTag -split '"tag_name"\s*:\s*"')[1] -split '"')[0]
+                $exeSize  = (Get-Item $script:dlgExe).Length
+                Save-IniToolVer "DeepLog" $savedTag $exeSize
+            } catch {}
+
+            # ── Complete flash ─────────────────────────────────────────────
+            $dlTimer.Stop()
+            $script:dlProgress = 100
+            $dlStatus.Text     = "Complete."
+            $dlPct.Text        = "100%"
+            $dlSub.Text        = "DeepLog.exe ready."
+            $dlSub.ForeColor   = [System.Drawing.Color]::FromArgb(255, 220, 0)
+            $dlTrack.Invalidate()
+            $dlForm.Refresh()
+            Start-Sleep -Milliseconds 500
+
+        } catch {
+            $dlTimer.Stop()
+            $dlForm.Close()
+            [System.Windows.Forms.MessageBox]::Show(
+                "Could not download DeepLog.`n`nCheck your connection or grab it manually:`nhttps://github.com/MariusHeier/deeplog/releases`n`n$_",
+                "Download Failed",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            )
+            return
+        }
+        $dlForm.Close()
+    }
+
+    # ── Launch directly, elevated ──────────────────────────────────────────
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName        = "cmd.exe"
+    $psi.Arguments       = "/k `"$script:dlgExe`""
     $psi.WindowStyle     = [System.Diagnostics.ProcessWindowStyle]::Normal
     $psi.UseShellExecute = $true
     $psi.Verb            = "runas"
@@ -756,8 +1036,8 @@ function Show-AutoCalibrate {
         $sb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(80,0,0,0))
         $tf=New-Object System.Drawing.Font("Impact",22,[System.Drawing.FontStyle]::Italic)
         $tb=New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
-        $g.DrawString("BETA AUTO CALIBRATION",$sf,$sb,22,17)
-        $g.DrawString("BETA AUTO CALIBRATION",$tf,$tb,20,15)
+        $g.DrawString("AUTO CALIBRATION",$sf,$sb,22,17)
+        $g.DrawString("AUTO CALIBRATION",$tf,$tb,20,15)
         $sf.Dispose();$sb.Dispose();$tf.Dispose();$tb.Dispose()
     })
     $picTitle.Add_MouseDown({ $script:acDrag=$true; $script:acDX=[System.Windows.Forms.Cursor]::Position.X-$dlg.Left; $script:acDY=[System.Windows.Forms.Cursor]::Position.Y-$dlg.Top })
@@ -798,7 +1078,7 @@ function Show-AutoCalibrate {
     $lblStatus = New-Object System.Windows.Forms.Label
     $lblStatus.Location  = New-Object System.Drawing.Point(8, 4)
     $lblStatus.Size      = New-Object System.Drawing.Size(($W - 62), 24)
-    $lblStatus.Text      = "[BETA]  This feature is Beta - please report any issues!"
+    $lblStatus.Text      = "[INFO]  Edit stick calibration values directly. Use with care!"
     $lblStatus.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $lblStatus.ForeColor = [System.Drawing.Color]::Yellow
     $lblStatus.BackColor = [System.Drawing.Color]::Transparent
@@ -1137,7 +1417,7 @@ function Show-AutoCalibrate {
         $logBox.ScrollToCaret()
     }
 
-    Write-AcLog "BETA - Auto Calibration Tool" "Yellow"
+    Write-AcLog "Auto Calibration Tool" "Yellow"
     Write-AcLog "Load a JSON file containing xMin/yMin/xMax/yMax values." "Gray"
     Write-AcLog "First complete set found = LEFT STICK. Last complete set found = RIGHT STICK." "Gray"
     Write-AcLog "Load reads directly from the file you pick. Save writes back to that same file." "Cyan"
@@ -1244,7 +1524,7 @@ function Show-AutoCalibrate {
         $script:acFilePath = [System.IO.Path]::Combine($fileDir, "LoadThisFileIntoMarius.json")
 
         $lblPath.Text      = "LoadThisFileIntoMarius.json  (source: $($ofd.SafeFileName))"
-        $lblStatus.Text    = "  [BETA]  LOADED  |  $($sets.Count) set(s) found - edit values then SAVE CONFIG"
+        $lblStatus.Text    = "  LOADED  |  $($sets.Count) set(s) found - edit values then SAVE CONFIG"
 
         $leftSet  = $sets[0]
         $rightSet = $sets[$sets.Count - 1]
@@ -1429,7 +1709,7 @@ function Show-AutoCalibrate {
             Write-AcLog "  SPINNER LEFT  -> yMin=$([int]$L_up.Value)  xMin=$([int]$L_left.Value)  xMax=$([int]$L_right.Value)  yMax=$([int]$L_down.Value)" "Cyan"
             Write-AcLog "  SPINNER RIGHT -> yMin=$([int]$R_up.Value)  xMin=$([int]$R_left.Value)  xMax=$([int]$R_right.Value)  yMax=$([int]$R_down.Value)" "Cyan"
             Write-AcLog "  Your original source file is still untouched." "Cyan"
-            $lblStatus.Text = "  [BETA]  SAVED  |  $($ops.Count) value(s) written"
+            $lblStatus.Text = "  SAVED  |  $($ops.Count) value(s) written"
         } catch {
             Write-AcLog "ERROR saving file: $_" "Red"
             [System.Windows.Forms.MessageBox]::Show("Could not save file:`n$_","Error",
@@ -2306,6 +2586,40 @@ function Open-Settings {
     } catch {}
 }
 
+function Get-IniToolVer {
+    # Returns @{ Tag = "v1.2.0"; Size = 512000 } for a given key prefix (e.g. "DeepPoll")
+    param([string]$Prefix)
+    $tag = ""; $size = -1L
+    try {
+        if (Test-Path $script:SettingsPath) {
+            Get-Content $script:SettingsPath | ForEach-Object {
+                if ($_ -match "^\s*${Prefix}Ver\s*=\s*(.+)")   { $tag  = $Matches[1].Trim() }
+                if ($_ -match "^\s*${Prefix}Size\s*=\s*(\d+)") { $size = [long]$Matches[1] }
+            }
+        }
+    } catch {}
+    return @{ Tag = $tag; Size = $size }
+}
+
+function Save-IniToolVer {
+    # Surgically writes <Prefix>Ver and <Prefix>Size into Settings.ini
+    param([string]$Prefix, [string]$Tag, [long]$Size)
+    try {
+        if (-not (Test-Path $script:SettingsPath)) { Save-Settings }
+        $raw       = Get-Content $script:SettingsPath
+        $wroteTag  = $false
+        $wroteSize = $false
+        $out = $raw | ForEach-Object {
+            if ($_ -match "^\s*${Prefix}Ver\s*=")  { $wroteTag  = $true; "${Prefix}Ver=$Tag"   }
+            elseif ($_ -match "^\s*${Prefix}Size\s*=") { $wroteSize = $true; "${Prefix}Size=$Size" }
+            else { $_ }
+        }
+        if (-not $wroteTag)  { $out += "${Prefix}Ver=$Tag"   }
+        if (-not $wroteSize) { $out += "${Prefix}Size=$Size" }
+        Set-Content -Path $script:SettingsPath -Value $out -Encoding UTF8
+    } catch {}
+}
+
 # ============================================================================
 # MUSIC via mciSendString (winmm.dll) - reliable MP3 looping
 # ============================================================================
@@ -2966,7 +3280,8 @@ function Show-ToolboxPage {
         $tbItems = @(
             @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
             @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
-            @{Name="Auto Calibration";                    URL="AUTO_CALIBRATE";        Desc="Edit stick calibration JSON values (xMin/yMin/xMax/yMax)"; Admin="BETA"},
+            @{Name="DeepLog";                             URL="DEEPLOG";               Desc="Logs USB input events with microsecond timestamps for latency analysis"; Admin="Requires Admin Permissions"},
+            @{Name="Auto Calibration";                    URL="AUTO_CALIBRATE";        Desc="Edit stick calibration JSON values (xMin/yMin/xMax/yMax)"},
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
             @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
             @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
@@ -3017,6 +3332,7 @@ function Show-ToolboxPage {
                 if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
                 if ($tu -eq "DEEPPOLL") { Show-DeepPoll; return }
+                if ($tu -eq "DEEPLOG")  { Show-DeepLog; return }
                 if ($tu -eq "AUTO_CALIBRATE") { Show-AutoCalibrate; return }
                 if ($tu -eq "BETA_PORTAL") {
                     $targetUrl = "https://beta.mariusheier.com/"
