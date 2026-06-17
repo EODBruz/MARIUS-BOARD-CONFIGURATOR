@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.7.4-yellow)
+![Version](https://img.shields.io/badge/version-3.7.5-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -89,13 +89,14 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | Tile | Action |
 |------|--------|
 | **Troubleshooting** | Common issues and solutions for MARIUS controllers — connection drops, overclock conflicts, button problems |
-| **DeepPoll** | Opens [tools.mariusheier.com/deeppoll](https://tools.mariusheier.com/deeppoll) — measures USB polling rate with microsecond precision using kernel-level ETW tracing |
+| **DeepPoll** | Downloads and runs DeepPoll.exe — measures USB polling rate with microsecond precision using kernel-level ETW tracing |
+| **DeepLog** | Downloads and runs DeepLog.exe — logs USB input events with microsecond timestamps for latency analysis |
 | **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
 | **HID Telemetry Diagnostic Tool** | Advanced HID telemetry diagnostic tool by [@TheQuest818](https://github.com/TheQuest818) |
 | **Join Marius Discord** | Opens the official Marius community Discord server |
 | **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
 | **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
-| **Auto Calibration (Beta)** | Edit your controller's calibration config (xMin/yMin/xMax/yMax) to yield better stick results |
+| **Auto Calibration** | Edit your controller's calibration config (xMin/yMin/xMax/yMax) to yield better stick results |
 | **Back** | Returns to the main menu |
 
 All browser-based tiles open in a centered 1200×800 app window using your default Chromium browser.
@@ -329,7 +330,7 @@ Check your internet connection. The updater queries the GitHub Releases API — 
 
 ## 📝 Files in This Repo
 
-- `MARIUS.ps1` — Main script (v3.7.4). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
+- `MARIUS.ps1` — Main script (v3.7.5). Auto-installs, auto-updates, creates shortcuts, contains embedded MBC icon and full USB device database
 - `MARIUS_Uninstall.ps1` — Removes all files, shortcuts, and folders cleanly
 - `Launch_MARIUS.bat` — Double-click launcher, no PowerShell commands needed
 - `README.md` — This file
@@ -370,6 +371,12 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 ---
 
 ## 📋 Changelog
+
+### v3.7.5
+- **Auto Calibration out of Beta** — Auto Calibration is now a full release feature, Beta label removed
+- **Added DeepLog** — new Marius Toolbox option that downloads and runs DeepLog.exe, logging USB input events with microsecond timestamps for latency analysis
+- **DeepPoll & DeepLog auto-update** — both tools now check the GitHub releases API on launch and automatically re-download if a newer version is available or if the local exe has been replaced
+- **Tool version tracking moved to Settings.ini** — version and file size for DeepPoll and DeepLog are now stored cleanly in the existing Settings.ini instead of separate files
 
 ### v3.7.4
 - General improvements and stability updates
