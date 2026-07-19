@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.7.5-yellow)
+![Version](https://img.shields.io/badge/version-3.7.6-yellow)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red)
@@ -371,6 +371,13 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 ---
 
 ## 📋 Changelog
+
+### v3.7.6
+- Added **Uninstall HIDUSBF** to Marius Toolbox — cleanly removes the HIDUSBF driver and related files
+- Auto Calibration stick buttons expanded from ±10/±20 to ±2/±5/±10/±20 for finer adjustment
+- Fixed a bug in the USB Latency Analyzer where devices behind a hub were never detected — hub-connected devices now correctly show under "2+ Chips"
+- Marius Toolbox reordered for quicker access to Auto Calibration and Beta Portal
+- USB Latency Analyzer tile re-enabled
 
 ### v3.7.5
 - **Auto Calibration out of Beta** — Auto Calibration is now a full release feature, Beta label removed
