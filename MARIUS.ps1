@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.5
+    MARIUS Board Configurator V3.7.6
 
 .DESCRIPTION
     All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
@@ -11,14 +11,14 @@
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7.5
+    Version: 3.7.6
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.5
+    Script Version 3.7.6
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.5"
+$script:CurrentVersion = "3.7.6"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -386,7 +386,7 @@ function Get-DeviceChain {
                 }
             }
             
-            if ($currentId -match "\\HUB\\") {
+            if ($dev -and $dev.FriendlyName -match "Hub" -and $dev.FriendlyName -notmatch "Root") {
                 $result.HubCount++
             }
             
@@ -1259,7 +1259,7 @@ function Show-AutoCalibrate {
     $stickBtnH   = 36
     $stickBtnGap = 6
     # Each group is $groupW wide starting at X=20 (left) and X=20+groupW+20 (right)
-    $stickBtnW   = [int](($groupW - 18) / 2)   # 2 buttons per side with gap
+    $stickBtnW   = [int](($groupW - 30) / 4)   # 4 buttons per side with gaps
     $rightGrpX   = 20 + $groupW + 20
 
     # Red "LEFT STICK" label above left buttons
@@ -1301,19 +1301,27 @@ function Show-AutoCalibrate {
         return $b
     }
 
-    # LEFT stick buttons (row 1: +10 | +20 / row 2: -10 | -20)
-    $btnL10  = New-StickBtn "+10"  (20)                                ($stickBtnY)                  $stickBtnW $stickBtnH
-    $btnL20  = New-StickBtn "+20"  (20 + $stickBtnW + $stickBtnGap)   ($stickBtnY)                  $stickBtnW $stickBtnH
-    $btnLm10 = New-StickBtn "-10"  (20)                                ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
-    $btnLm20 = New-StickBtn "-20"  (20 + $stickBtnW + $stickBtnGap)   ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    # LEFT stick buttons (row 1: +2 | +5 | +10 | +20 / row 2: -2 | -5 | -10 | -20)
+    $btnL2   = New-StickBtn "+2"   (20)                                              ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnL5   = New-StickBtn "+5"   (20 + $stickBtnW + $stickBtnGap)                 ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnL10  = New-StickBtn "+10"  (20 + ($stickBtnW + $stickBtnGap)*2)             ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnL20  = New-StickBtn "+20"  (20 + ($stickBtnW + $stickBtnGap)*3)             ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnLm2  = New-StickBtn "-2"   (20)                                              ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnLm5  = New-StickBtn "-5"   (20 + $stickBtnW + $stickBtnGap)                 ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnLm10 = New-StickBtn "-10"  (20 + ($stickBtnW + $stickBtnGap)*2)             ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnLm20 = New-StickBtn "-20"  (20 + ($stickBtnW + $stickBtnGap)*3)             ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
 
     # RIGHT stick buttons — same layout shifted to right group X
-    $btnR10  = New-StickBtn "+10"  ($rightGrpX)                                ($stickBtnY)                  $stickBtnW $stickBtnH
-    $btnR20  = New-StickBtn "+20"  ($rightGrpX + $stickBtnW + $stickBtnGap)   ($stickBtnY)                  $stickBtnW $stickBtnH
-    $btnRm10 = New-StickBtn "-10"  ($rightGrpX)                                ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
-    $btnRm20 = New-StickBtn "-20"  ($rightGrpX + $stickBtnW + $stickBtnGap)   ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnR2   = New-StickBtn "+2"   ($rightGrpX)                                              ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnR5   = New-StickBtn "+5"   ($rightGrpX + $stickBtnW + $stickBtnGap)                 ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnR10  = New-StickBtn "+10"  ($rightGrpX + ($stickBtnW + $stickBtnGap)*2)             ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnR20  = New-StickBtn "+20"  ($rightGrpX + ($stickBtnW + $stickBtnGap)*3)             ($stickBtnY)                  $stickBtnW $stickBtnH
+    $btnRm2  = New-StickBtn "-2"   ($rightGrpX)                                              ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnRm5  = New-StickBtn "-5"   ($rightGrpX + $stickBtnW + $stickBtnGap)                 ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnRm10 = New-StickBtn "-10"  ($rightGrpX + ($stickBtnW + $stickBtnGap)*2)             ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
+    $btnRm20 = New-StickBtn "-20"  ($rightGrpX + ($stickBtnW + $stickBtnGap)*3)             ($stickBtnY + $stickBtnH + 4) $stickBtnW $stickBtnH
 
-    foreach ($b in @($btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+    foreach ($b in @($btnL2,$btnL5,$btnL10,$btnL20,$btnLm2,$btnLm5,$btnLm10,$btnLm20,$btnR2,$btnR5,$btnR10,$btnR20,$btnRm2,$btnRm5,$btnRm10,$btnRm20)) {
         $inner.Controls.Add($b)
     }
 
@@ -1329,52 +1337,66 @@ function Show-AutoCalibrate {
     $inner.Controls.Add($lblAdj)
 
     $btnY = $adjY + 28
-    $btnAdjW = [int](($W - 6 - 40 - 30) / 4)
+    $btnAdjW = [int](($W - 6 - 40 - 40) / 5)
 
-    $btn10x = New-Object System.Windows.Forms.Button
-    $btn10x.Location  = New-Object System.Drawing.Point(20, $btnY)
-    $btn10x.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
-    $btn10x.Text      = "10x  (+/-10 ALL)"
-    $btn10x.FlatStyle = "Flat"
-    $btn10x.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
-    $btn10x.ForeColor = [System.Drawing.Color]::Yellow
-    $btn10x.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $btn10x.FlatAppearance.BorderSize = 1
-    $btn10x.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-    $btn10x.Cursor    = [System.Windows.Forms.Cursors]::Hand
-    $btn10x.Enabled   = $false
-    $inner.Controls.Add($btn10x)
+    $btn2all = New-Object System.Windows.Forms.Button
+    $btn2all.Location  = New-Object System.Drawing.Point(20, $btnY)
+    $btn2all.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn2all.Text      = "+/-2 ALL"
+    $btn2all.FlatStyle = "Flat"
+    $btn2all.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn2all.ForeColor = [System.Drawing.Color]::Yellow
+    $btn2all.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn2all.FlatAppearance.BorderSize = 1
+    $btn2all.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn2all.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn2all.Enabled   = $false
+    $inner.Controls.Add($btn2all)
 
-    $btn2x10 = New-Object System.Windows.Forms.Button
-    $btn2x10.Location  = New-Object System.Drawing.Point((20 + $btnAdjW + 10), $btnY)
-    $btn2x10.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
-    $btn2x10.Text      = "2x+10  (+/-20 ALL)"
-    $btn2x10.FlatStyle = "Flat"
-    $btn2x10.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
-    $btn2x10.ForeColor = [System.Drawing.Color]::Yellow
-    $btn2x10.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $btn2x10.FlatAppearance.BorderSize = 1
-    $btn2x10.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-    $btn2x10.Cursor    = [System.Windows.Forms.Cursors]::Hand
-    $btn2x10.Enabled   = $false
-    $inner.Controls.Add($btn2x10)
+    $btn5all = New-Object System.Windows.Forms.Button
+    $btn5all.Location  = New-Object System.Drawing.Point((20 + $btnAdjW + 10), $btnY)
+    $btn5all.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn5all.Text      = "+/-5 ALL"
+    $btn5all.FlatStyle = "Flat"
+    $btn5all.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn5all.ForeColor = [System.Drawing.Color]::Yellow
+    $btn5all.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn5all.FlatAppearance.BorderSize = 1
+    $btn5all.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn5all.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn5all.Enabled   = $false
+    $inner.Controls.Add($btn5all)
 
-    $btn1xMinus10 = New-Object System.Windows.Forms.Button
-    $btn1xMinus10.Location  = New-Object System.Drawing.Point((20 + 2*($btnAdjW + 10)), $btnY)
-    $btn1xMinus10.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
-    $btn1xMinus10.Text      = "1x-10  (UNDO +/-10)"
-    $btn1xMinus10.FlatStyle = "Flat"
-    $btn1xMinus10.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
-    $btn1xMinus10.ForeColor = [System.Drawing.Color]::Yellow
-    $btn1xMinus10.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $btn1xMinus10.FlatAppearance.BorderSize = 1
-    $btn1xMinus10.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-    $btn1xMinus10.Cursor    = [System.Windows.Forms.Cursors]::Hand
-    $btn1xMinus10.Enabled   = $false
-    $inner.Controls.Add($btn1xMinus10)
+    $btn10all = New-Object System.Windows.Forms.Button
+    $btn10all.Location  = New-Object System.Drawing.Point((20 + 2*($btnAdjW + 10)), $btnY)
+    $btn10all.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn10all.Text      = "+/-10 ALL"
+    $btn10all.FlatStyle = "Flat"
+    $btn10all.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn10all.ForeColor = [System.Drawing.Color]::Yellow
+    $btn10all.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn10all.FlatAppearance.BorderSize = 1
+    $btn10all.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn10all.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn10all.Enabled   = $false
+    $inner.Controls.Add($btn10all)
+
+    $btn20all = New-Object System.Windows.Forms.Button
+    $btn20all.Location  = New-Object System.Drawing.Point((20 + 3*($btnAdjW + 10)), $btnY)
+    $btn20all.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
+    $btn20all.Text      = "+/-20 ALL"
+    $btn20all.FlatStyle = "Flat"
+    $btn20all.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+    $btn20all.ForeColor = [System.Drawing.Color]::Yellow
+    $btn20all.Font      = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btn20all.FlatAppearance.BorderSize = 1
+    $btn20all.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
+    $btn20all.Cursor    = [System.Windows.Forms.Cursors]::Hand
+    $btn20all.Enabled   = $false
+    $inner.Controls.Add($btn20all)
 
     $btnReset = New-Object System.Windows.Forms.Button
-    $btnReset.Location  = New-Object System.Drawing.Point((20 + 3*($btnAdjW + 10)), $btnY)
+    $btnReset.Location  = New-Object System.Drawing.Point((20 + 4*($btnAdjW + 10)), $btnY)
     $btnReset.Size      = New-Object System.Drawing.Size($btnAdjW, 40)
     $btnReset.Text      = "RESET TO LOADED"
     $btnReset.FlatStyle = "Flat"
@@ -1387,8 +1409,8 @@ function Show-AutoCalibrate {
     $btnReset.Enabled   = $false
     $inner.Controls.Add($btnReset)
 
-    foreach ($b in @($btnLoad,$btnSave,$btn10x,$btn2x10,$btn1xMinus10,$btnReset,
-                     $btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+    foreach ($b in @($btnLoad,$btnSave,$btn2all,$btn5all,$btn10all,$btn20all,$btnReset,
+                     $btnL2,$btnL5,$btnL10,$btnL20,$btnLm2,$btnLm5,$btnLm10,$btnLm20,$btnR2,$btnR5,$btnR10,$btnR20,$btnRm2,$btnRm5,$btnRm10,$btnRm20)) {
         $b.Add_MouseEnter({ if($this.Enabled){ $this.BackColor=[System.Drawing.Color]::FromArgb(40,40,12) } })
         $b.Add_MouseLeave({ if($this.Enabled){ $this.BackColor=[System.Drawing.Color]::FromArgb(20,20,20) } })
     }
@@ -1559,15 +1581,17 @@ function Show-AutoCalibrate {
         $btnSave.Enabled = $true
         $btnSave.ForeColor = [System.Drawing.Color]::Yellow
         $btnSave.FlatAppearance.BorderColor = [System.Drawing.Color]::Yellow
-        $btn10x.Enabled = $true
-        $btn10x.ForeColor = [System.Drawing.Color]::Yellow
-        $btn2x10.Enabled = $true
-        $btn2x10.ForeColor = [System.Drawing.Color]::Yellow
-        $btn1xMinus10.Enabled = $true
-        $btn1xMinus10.ForeColor = [System.Drawing.Color]::Yellow
+        $btn2all.Enabled = $true
+        $btn2all.ForeColor = [System.Drawing.Color]::Yellow
+        $btn5all.Enabled = $true
+        $btn5all.ForeColor = [System.Drawing.Color]::Yellow
+        $btn10all.Enabled = $true
+        $btn10all.ForeColor = [System.Drawing.Color]::Yellow
+        $btn20all.Enabled = $true
+        $btn20all.ForeColor = [System.Drawing.Color]::Yellow
         $btnReset.Enabled = $true
         $btnReset.ForeColor = [System.Drawing.Color]::Yellow
-        foreach ($b in @($btnL10,$btnL20,$btnLm10,$btnLm20,$btnR10,$btnR20,$btnRm10,$btnRm20)) {
+        foreach ($b in @($btnL2,$btnL5,$btnL10,$btnL20,$btnLm2,$btnLm5,$btnLm10,$btnLm20,$btnR2,$btnR5,$btnR10,$btnR20,$btnRm2,$btnRm5,$btnRm10,$btnRm20)) {
             $b.Enabled   = $true
             $b.ForeColor = [System.Drawing.Color]::Yellow
         }
@@ -1608,9 +1632,10 @@ function Show-AutoCalibrate {
         Write-AcLog "  RIGHT UP $($before.R_up)->$($R_up.Value)  LEFT $($before.R_left)->$($R_left.Value)  RIGHT $($before.R_right)->$($R_right.Value)  DOWN $($before.R_down)->$($R_down.Value)" "Gray"
     }
 
-    $btn10x.Add_Click({ Apply-AcDelta -Delta 10 })
-    $btn2x10.Add_Click({ Apply-AcDelta -Delta 20 })
-    $btn1xMinus10.Add_Click({ Apply-AcDelta -Delta -10 })
+    $btn2all.Add_Click({  Apply-AcDelta -Delta 2  })
+    $btn5all.Add_Click({  Apply-AcDelta -Delta 5  })
+    $btn10all.Add_Click({ Apply-AcDelta -Delta 10 })
+    $btn20all.Add_Click({ Apply-AcDelta -Delta 20 })
 
     # ── Per-stick delta (only touches one stick) ─────────────────────────
     function Apply-AcDeltaStick {
@@ -1636,12 +1661,20 @@ function Show-AutoCalibrate {
         }
     }
 
+    $btnL2.Add_Click({   Apply-AcDeltaStick -Delta   2 -Stick 'LEFT'  })
+    $btnL5.Add_Click({   Apply-AcDeltaStick -Delta   5 -Stick 'LEFT'  })
     $btnL10.Add_Click({  Apply-AcDeltaStick -Delta  10 -Stick 'LEFT'  })
     $btnL20.Add_Click({  Apply-AcDeltaStick -Delta  20 -Stick 'LEFT'  })
+    $btnLm2.Add_Click({  Apply-AcDeltaStick -Delta  -2 -Stick 'LEFT'  })
+    $btnLm5.Add_Click({  Apply-AcDeltaStick -Delta  -5 -Stick 'LEFT'  })
     $btnLm10.Add_Click({ Apply-AcDeltaStick -Delta -10 -Stick 'LEFT'  })
     $btnLm20.Add_Click({ Apply-AcDeltaStick -Delta -20 -Stick 'LEFT'  })
+    $btnR2.Add_Click({   Apply-AcDeltaStick -Delta   2 -Stick 'RIGHT' })
+    $btnR5.Add_Click({   Apply-AcDeltaStick -Delta   5 -Stick 'RIGHT' })
     $btnR10.Add_Click({  Apply-AcDeltaStick -Delta  10 -Stick 'RIGHT' })
     $btnR20.Add_Click({  Apply-AcDeltaStick -Delta  20 -Stick 'RIGHT' })
+    $btnRm2.Add_Click({  Apply-AcDeltaStick -Delta  -2 -Stick 'RIGHT' })
+    $btnRm5.Add_Click({  Apply-AcDeltaStick -Delta  -5 -Stick 'RIGHT' })
     $btnRm10.Add_Click({ Apply-AcDeltaStick -Delta -10 -Stick 'RIGHT' })
     $btnRm20.Add_Click({ Apply-AcDeltaStick -Delta -20 -Stick 'RIGHT' })
 
@@ -2155,7 +2188,9 @@ function Show-GameBarDialog {
         [string]$RestoreLabel = "",
         [string]$CancelLabel  = "CANCEL",
         [bool]$IsApplied      = $false,
-        [bool]$ResultOnly     = $false
+        [bool]$ResultOnly     = $false,
+        [string]$Credits      = "Script by: @EODBruz",
+        [bool]$ShowStatusBadge = $true
     )
 
     # Dimensions
@@ -2296,22 +2331,24 @@ function Show-GameBarDialog {
     }
 
     if (-not $ResultOnly) {
-        # Status badge
-        $statusBg = New-Object System.Windows.Forms.Panel
-        $statusBg.Location  = New-Object System.Drawing.Point(20, ($H - 122))
-        $statusBg.Size      = New-Object System.Drawing.Size(($W - 46), 28)
-        $statusBg.BackColor = [System.Drawing.Color]::FromArgb(22, 22, 22)
-        $inner.Controls.Add($statusBg)
+        if ($ShowStatusBadge) {
+            # Status badge
+            $statusBg = New-Object System.Windows.Forms.Panel
+            $statusBg.Location  = New-Object System.Drawing.Point(20, ($H - 122))
+            $statusBg.Size      = New-Object System.Drawing.Size(($W - 46), 28)
+            $statusBg.BackColor = [System.Drawing.Color]::FromArgb(22, 22, 22)
+            $inner.Controls.Add($statusBg)
 
-        $badge = New-Object System.Windows.Forms.Label
-        $badge.Location  = New-Object System.Drawing.Point(0, 0)
-        $badge.Size      = New-Object System.Drawing.Size(($W - 46), 28)
-        $badge.Text      = if ($IsApplied) { "  >> STATUS: CURRENTLY APPLIED" } else { "  >> STATUS: NOT APPLIED" }
-        $badge.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-        $badge.ForeColor = if ($IsApplied) { [System.Drawing.Color]::FromArgb(80,210,80) } else { [System.Drawing.Color]::FromArgb(210,70,70) }
-        $badge.BackColor = [System.Drawing.Color]::Transparent
-        $badge.TextAlign = "MiddleLeft"
-        $statusBg.Controls.Add($badge)
+            $badge = New-Object System.Windows.Forms.Label
+            $badge.Location  = New-Object System.Drawing.Point(0, 0)
+            $badge.Size      = New-Object System.Drawing.Size(($W - 46), 28)
+            $badge.Text      = if ($IsApplied) { "  >> STATUS: CURRENTLY APPLIED" } else { "  >> STATUS: NOT APPLIED" }
+            $badge.Font      = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+            $badge.ForeColor = if ($IsApplied) { [System.Drawing.Color]::FromArgb(80,210,80) } else { [System.Drawing.Color]::FromArgb(210,70,70) }
+            $badge.BackColor = [System.Drawing.Color]::Transparent
+            $badge.TextAlign = "MiddleLeft"
+            $statusBg.Controls.Add($badge)
+        }
 
         # Two buttons centred, with RGB border panels behind them
         $btnW   = 220
@@ -2375,7 +2412,7 @@ function Show-GameBarDialog {
         $lblCredits = New-Object System.Windows.Forms.Label
         $lblCredits.Location  = New-Object System.Drawing.Point(0, ($H - 30))
         $lblCredits.Size      = New-Object System.Drawing.Size(($W - 6), 20)
-        $lblCredits.Text      = "GameBar fix by: @FR33THY  |  Script by: @EODBruz"
+        $lblCredits.Text      = $Credits
         $lblCredits.Font      = New-Object System.Drawing.Font("Segoe UI", 8)
         $lblCredits.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
         $lblCredits.BackColor = [System.Drawing.Color]::Transparent
@@ -2438,7 +2475,8 @@ function Invoke-GameBarNotificationFix {
         -ApplyLabel   "APPLY" `
         -RestoreLabel "RESTORE" `
         -CancelLabel  "CANCEL" `
-        -IsApplied    $isApplied
+        -IsApplied    $isApplied `
+        -Credits      "GameBar fix by: @FR33THY  |  Script by: @EODBruz"
 
     if ($choice -eq "cancel" -or $choice -eq $null) { return }
     $cl     = if ($choice -eq "apply") { 'apply' } else { 'restore' }
@@ -2518,6 +2556,104 @@ function Invoke-GameBarNotificationFix {
             ) `
             -ResultOnly $true | Out-Null
     }
+}
+
+function Invoke-UninstallHIDUSBF {
+    # ── Styled confirm dialog ─────────────────────────────────────────────────
+    $choice = Show-GameBarDialog `
+        -Title        "UNINSTALL HIDUSBF" `
+        -Subtitle     "This will completely remove HIDUSBF from your system." `
+        -Lines        @(
+            "## Steps that will be performed:",
+            "  [+]  Remove hidusbf.sys from System32\drivers",
+            "  [+]  Remove hidusbf.dll files if present",
+            "  [+]  Remove common HIDUSBF folders",
+            "  [+]  Verify removal",
+            "",
+            "  A restart may be needed to finish removal.",
+            "  Downloaded ZIP files will NOT be removed."
+        ) `
+        -ApplyLabel     "UNINSTALL" `
+        -RestoreLabel   "CANCEL" `
+        -ShowStatusBadge $false
+
+    if ($choice -ne "apply") { return }
+
+    # ── Admin block (mirrors Uninstall_HIDUSBF_Complete.bat) ─────────────────
+    $psBlock = [scriptblock]::Create(@'
+        $result = @{ SysRemoved = $false; SysStillPresent = $false; FoldersRemoved = 0 }
+
+        # Step 1: driver + dll files
+        $sysPath = "C:\Windows\System32\drivers\hidusbf.sys"
+        if (Test-Path $sysPath) {
+            Remove-Item -Path $sysPath -Force -ErrorAction SilentlyContinue
+        }
+        "C:\Windows\System32\hidusbf.dll","C:\Windows\SysWOW64\hidusbf.dll" | ForEach-Object {
+            if (Test-Path $_) { Remove-Item -Path $_ -Force -ErrorAction SilentlyContinue }
+        }
+
+        # Step 2: verify driver removal
+        $result.SysStillPresent = Test-Path $sysPath
+        $result.SysRemoved = -not $result.SysStillPresent
+
+        # Step 3: common folders (downloaded ZIPs are left alone)
+        $folders = @(
+            "C:\Tools\HIDUSBF",
+            "C:\Program Files\HIDUSBF",
+            "C:\Program Files (x86)\HIDUSBF",
+            "$env:USERPROFILE\Downloads\HIDUSBF",
+            "$env:USERPROFILE\Desktop\HIDUSBF"
+        )
+        foreach ($f in $folders) {
+            if (Test-Path $f) {
+                Remove-Item -Path $f -Recurse -Force -ErrorAction SilentlyContinue
+                $result.FoldersRemoved++
+            }
+        }
+
+        $resultPath = "$env:TEMP\marius_hidusbf_uninstall_result.json"
+        ($result | ConvertTo-Json -Compress) | Out-File -FilePath $resultPath -Encoding utf8 -Force
+'@)
+
+    $resultPath = "$env:TEMP\marius_hidusbf_uninstall_result.json"
+    Remove-Item -Path $resultPath -Force -ErrorAction SilentlyContinue
+
+    $isAdmin = [Security.Principal.WindowsIdentity]::GetCurrent().Groups.Value -contains 'S-1-5-32-544'
+    if ($isAdmin) {
+        . $psBlock
+    } else {
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($psBlock.ToString()))
+        Start-Process powershell -ArgumentList "-nop -enc $encoded" -Verb RunAs -Wait -ErrorAction SilentlyContinue
+    }
+
+    $uninstallResult = if (Test-Path $resultPath) {
+        Get-Content $resultPath -Raw | ConvertFrom-Json
+    } else { $null }
+    Remove-Item -Path $resultPath -Force -ErrorAction SilentlyContinue
+
+    # ── Styled result dialog ──────────────────────────────────────────────────
+    $sysRemoved = if ($uninstallResult) { $uninstallResult.SysRemoved } else { -not (Test-Path "C:\Windows\System32\drivers\hidusbf.sys") }
+    $foldersRemoved = if ($uninstallResult) { $uninstallResult.FoldersRemoved } else { 0 }
+
+    $resultLines = @(
+        "## Uninstall summary:",
+        "  [+]  Driver files removed",
+        "  [+]  hidusbf.dll removed (System32 / SysWOW64)",
+        "  [+]  $foldersRemoved HIDUSBF folder(s) removed",
+        ""
+    )
+    if ($sysRemoved) {
+        $resultLines += "  hidusbf.sys: REMOVED"
+    } else {
+        $resultLines += "  hidusbf.sys: STILL PRESENT (restart required)"
+    }
+    $resultLines += @("", "  Restart your computer whenever you're ready", "  to finish removing HIDUSBF.")
+
+    Show-GameBarDialog `
+        -Title      "HIDUSBF UNINSTALLED" `
+        -Subtitle   "Restart when convenient to finish removal." `
+        -Lines      $resultLines `
+        -ResultOnly $true | Out-Null
 }
 
 # ============================================================================
@@ -3278,15 +3414,16 @@ function Show-ToolboxPage {
     # Build toolbox tiles only once; reuse on subsequent visits
     if ($script:toolboxTiles.Count -eq 0) {
         $tbItems = @(
-            @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
-            @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
-            @{Name="DeepLog";                             URL="DEEPLOG";               Desc="Logs USB input events with microsecond timestamps for latency analysis"; Admin="Requires Admin Permissions"},
             @{Name="Auto Calibration";                    URL="AUTO_CALIBRATE";        Desc="Edit stick calibration JSON values (xMin/yMin/xMax/yMax)"},
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
+            @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
+            @{Name="DeepLog";                             URL="DEEPLOG";               Desc="Logs USB input events with microsecond timestamps for latency analysis"; Admin="Requires Admin Permissions"},
             @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
-            @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
-            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
             @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"; Admin="Requires Admin Permissions"},
+            @{Name="Uninstall HIDUSBF";                   URL="UNINSTALL_HIDUSBF";     Desc="Completely removes the HIDUSBF driver and related files from your system"; Admin="Requires Admin Permissions"},
+            @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
+            @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
+            @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
             @{Name="Back";                                URL="BACK";                  Desc="Return to main menu"}
         )
         $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
@@ -3329,6 +3466,7 @@ function Show-ToolboxPage {
                 if ($tu -eq "BACK")                { Show-MainPage; return }
                 if ($tu -eq "USB_ANALYZER")        { Show-UsbAnalyzer; return }
                 if ($tu -eq "GAMEBAR_FIX")         { Invoke-GameBarNotificationFix; return }
+                if ($tu -eq "UNINSTALL_HIDUSBF")   { Invoke-UninstallHIDUSBF; return }
                 if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
                 if ($tu -eq "DEEPPOLL") { Show-DeepPoll; return }
@@ -3408,7 +3546,7 @@ $websites = @(
     @{Name="Joystick Tester";          URL="https://hardwaretester.com/gamepad";                         Desc="Test your joystick inputs, buttons, and analog stick precision"},
     @{Name="Polling Rate Checker";     URL="https://tools.mariusheier.com/poll_checker.html";            Desc="Test and verify your controller's polling rate"},
     @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
-    @{Name="USB Latency Analyzer";     URL="USB_ANALYZER";                                                Desc="Count chips between your device and CPU. More chips = more latency"},
+    @{Name="USB Latency Analyzer"; URL="USB_ANALYZER";                                                Desc="Count chips between your device and CPU. More chips = more latency"},
     @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
     @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="HID Telemetry Diagnostic, Gamebar Notification Removal, FR33THY Ultimate Guide"},
@@ -3444,6 +3582,7 @@ foreach ($site in $websites) {
     $tile.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
     $tile.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
     $tile.Tag = $site.URL
+
     
     # Add hover glow effect
     $tile.Add_MouseEnter({
