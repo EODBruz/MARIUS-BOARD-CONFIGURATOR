@@ -1,24 +1,24 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MARIUS Board Configurator V3.7.6
+    MARIUS Board Configurator V3.7.7
 
 .DESCRIPTION
-    All-in-one launcher for MARIUS tools including USB Latency Analyzer and HID Telemetry.
+    All-in-one launcher for MARIUS tools including USB Latency Analyzer.
     No additional files needed - everything is contained in this single script.
     Features desktop shortcut installer and embedded MBC icon.
 
 .NOTES
     Created by: @mariusheier (Original Creator)
     Script by: @EODBruz (PowerShell Development)
-    Version: 3.7.6
+    Version: 3.7.7
 
 .CREDITS
     App Creator: @mariusheier
     Script Developer: @EODBruz
     Optimization Scripts: FR33THY
     HID Telemetry Tool: @TheQuest818
-    Script Version 3.7.6
+    Script Version 3.7.7
 
 .INSTALLATION
     Quick Install (One-Liner):
@@ -34,7 +34,7 @@
 # ============================================================================
 # INSTALL PATHS
 # ============================================================================
-$script:CurrentVersion = "3.7.6"
+$script:CurrentVersion = "3.7.7"
 $script:InstallDir     = "$env:APPDATA\MARIUS"
 $script:InstallPath    = "$script:InstallDir\MARIUS.ps1"
 $script:ScriptUrl      = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/MARIUS.ps1"
@@ -65,78 +65,6 @@ function Install-MbcIcon {
         return $null
     }
 }
-
-# ============================================================================
-# EMBEDDED CONTROLLER TELEMETRY HTML (Base64 encoded)
-# ============================================================================
-
-
-function Install-ControllerTelemetry {
-    <#
-    .SYNOPSIS
-        Downloads controller-telemetry.html from GitHub and opens it in the user's browser.
-    .NOTES
-        Fetches the live file from your GitHub Pages so no base64 is needed.
-    #>
-    try {
-        if (-not (Test-Path $script:InstallDir)) {
-            New-Item -ItemType Directory -Path $script:InstallDir -Force | Out-Null
-        }
-
-        $htmlPath = "$script:InstallDir\controller-telemetry.html"
-        $htmlUrl  = "https://raw.githubusercontent.com/EODBruz/MARIUS-BOARD-CONFIGURATOR/main/controller-telemetry.html"
-
-        # Always re-download so the user gets the latest version from GitHub
-        try {
-            $wc = New-Object System.Net.WebClient
-            $wc.Headers.Add("Cache-Control", "no-cache")
-            $wc.DownloadFile($htmlUrl, $htmlPath)
-        } catch {
-            # If download fails but a cached copy exists, fall back to it
-            if (-not (Test-Path $htmlPath)) {
-                [System.Windows.Forms.MessageBox]::Show(
-                    "Could not download Controller Telemetry and no cached copy exists.`n$_",
-                    "Network Error",
-                    [System.Windows.Forms.MessageBoxButtons]::OK,
-                    [System.Windows.Forms.MessageBoxIcon]::Warning
-                )
-                return
-            }
-        }
-
-        # Open in default Chromium browser (WebHID requires Chrome/Edge/Opera)
-        $defaultBrowser = Get-DefaultBrowser
-        $browserPath    = Get-BrowserPath $defaultBrowser
-
-        if (-not $browserPath) {
-            foreach ($b in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
-                if ($b -ne $defaultBrowser) {
-                    $browserPath = Get-BrowserPath $b
-                    if ($browserPath) { break }
-                }
-            }
-        }
-
-        if ($browserPath) {
-            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-            $wW = 1400; $wH = 900
-            $l   = [Math]::Floor(($screen.Width  - $wW) / 2)
-            $t   = [Math]::Floor(($screen.Height - $wH) / 2)
-            Start-Process -FilePath $browserPath -ArgumentList "--app=`"file:///$($htmlPath.Replace('\','/').TrimStart('/'))`" --window-size=$wW,$wH --window-position=$l,$t"
-        } else {
-            Start-Process $htmlPath   # OS default open
-        }
-
-    } catch {
-        [System.Windows.Forms.MessageBox]::Show(
-            "Could not open Controller Telemetry:`n$_",
-            "Error",
-            [System.Windows.Forms.MessageBoxButtons]::OK,
-            [System.Windows.Forms.MessageBoxIcon]::Error
-        )
-    }
-}
-
 
 function Install-DesktopShortcut {
     param([string]$IconPath)
@@ -2558,104 +2486,6 @@ function Invoke-GameBarNotificationFix {
     }
 }
 
-function Invoke-UninstallHIDUSBF {
-    # ── Styled confirm dialog ─────────────────────────────────────────────────
-    $choice = Show-GameBarDialog `
-        -Title        "UNINSTALL HIDUSBF" `
-        -Subtitle     "This will completely remove HIDUSBF from your system." `
-        -Lines        @(
-            "## Steps that will be performed:",
-            "  [+]  Remove hidusbf.sys from System32\drivers",
-            "  [+]  Remove hidusbf.dll files if present",
-            "  [+]  Remove common HIDUSBF folders",
-            "  [+]  Verify removal",
-            "",
-            "  A restart may be needed to finish removal.",
-            "  Downloaded ZIP files will NOT be removed."
-        ) `
-        -ApplyLabel     "UNINSTALL" `
-        -RestoreLabel   "CANCEL" `
-        -ShowStatusBadge $false
-
-    if ($choice -ne "apply") { return }
-
-    # ── Admin block (mirrors Uninstall_HIDUSBF_Complete.bat) ─────────────────
-    $psBlock = [scriptblock]::Create(@'
-        $result = @{ SysRemoved = $false; SysStillPresent = $false; FoldersRemoved = 0 }
-
-        # Step 1: driver + dll files
-        $sysPath = "C:\Windows\System32\drivers\hidusbf.sys"
-        if (Test-Path $sysPath) {
-            Remove-Item -Path $sysPath -Force -ErrorAction SilentlyContinue
-        }
-        "C:\Windows\System32\hidusbf.dll","C:\Windows\SysWOW64\hidusbf.dll" | ForEach-Object {
-            if (Test-Path $_) { Remove-Item -Path $_ -Force -ErrorAction SilentlyContinue }
-        }
-
-        # Step 2: verify driver removal
-        $result.SysStillPresent = Test-Path $sysPath
-        $result.SysRemoved = -not $result.SysStillPresent
-
-        # Step 3: common folders (downloaded ZIPs are left alone)
-        $folders = @(
-            "C:\Tools\HIDUSBF",
-            "C:\Program Files\HIDUSBF",
-            "C:\Program Files (x86)\HIDUSBF",
-            "$env:USERPROFILE\Downloads\HIDUSBF",
-            "$env:USERPROFILE\Desktop\HIDUSBF"
-        )
-        foreach ($f in $folders) {
-            if (Test-Path $f) {
-                Remove-Item -Path $f -Recurse -Force -ErrorAction SilentlyContinue
-                $result.FoldersRemoved++
-            }
-        }
-
-        $resultPath = "$env:TEMP\marius_hidusbf_uninstall_result.json"
-        ($result | ConvertTo-Json -Compress) | Out-File -FilePath $resultPath -Encoding utf8 -Force
-'@)
-
-    $resultPath = "$env:TEMP\marius_hidusbf_uninstall_result.json"
-    Remove-Item -Path $resultPath -Force -ErrorAction SilentlyContinue
-
-    $isAdmin = [Security.Principal.WindowsIdentity]::GetCurrent().Groups.Value -contains 'S-1-5-32-544'
-    if ($isAdmin) {
-        . $psBlock
-    } else {
-        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($psBlock.ToString()))
-        Start-Process powershell -ArgumentList "-nop -enc $encoded" -Verb RunAs -Wait -ErrorAction SilentlyContinue
-    }
-
-    $uninstallResult = if (Test-Path $resultPath) {
-        Get-Content $resultPath -Raw | ConvertFrom-Json
-    } else { $null }
-    Remove-Item -Path $resultPath -Force -ErrorAction SilentlyContinue
-
-    # ── Styled result dialog ──────────────────────────────────────────────────
-    $sysRemoved = if ($uninstallResult) { $uninstallResult.SysRemoved } else { -not (Test-Path "C:\Windows\System32\drivers\hidusbf.sys") }
-    $foldersRemoved = if ($uninstallResult) { $uninstallResult.FoldersRemoved } else { 0 }
-
-    $resultLines = @(
-        "## Uninstall summary:",
-        "  [+]  Driver files removed",
-        "  [+]  hidusbf.dll removed (System32 / SysWOW64)",
-        "  [+]  $foldersRemoved HIDUSBF folder(s) removed",
-        ""
-    )
-    if ($sysRemoved) {
-        $resultLines += "  hidusbf.sys: REMOVED"
-    } else {
-        $resultLines += "  hidusbf.sys: STILL PRESENT (restart required)"
-    }
-    $resultLines += @("", "  Restart your computer whenever you're ready", "  to finish removing HIDUSBF.")
-
-    Show-GameBarDialog `
-        -Title      "HIDUSBF UNINSTALLED" `
-        -Subtitle   "Restart when convenient to finish removal." `
-        -Lines      $resultLines `
-        -ResultOnly $true | Out-Null
-}
-
 # ============================================================================
 # SETTINGS HELPERS (Settings.ini in %APPDATA%\MARIUS)
 # ============================================================================
@@ -3418,12 +3248,12 @@ function Show-ToolboxPage {
             @{Name="Beta Portal";                         URL="BETA_PORTAL";           Desc="Enroll your board in the beta program and receive early firmware updates"},
             @{Name="DeepPoll";                            URL="DEEPPOLL";              Desc="Measures USB polling rate with microsecond precision using kernel-level ETW tracing"; Admin="Requires Admin Permissions"},
             @{Name="DeepLog";                             URL="DEEPLOG";               Desc="Logs USB input events with microsecond timestamps for latency analysis"; Admin="Requires Admin Permissions"},
-            @{Name="HID Telemetry Diagnostic Tool";       URL="CONTROLLER_TELEMETRY";  Desc="Advanced HID Telemetry Diagnostic Tool By @TheQuest818"},
             @{Name="Gamebar Notification Removal";        URL="GAMEBAR_FIX";           Desc="Removes GameBar Notification with 8K Polling Affected Controllers"; Admin="Requires Admin Permissions"},
-            @{Name="Uninstall HIDUSBF";                   URL="UNINSTALL_HIDUSBF";     Desc="Completely removes the HIDUSBF driver and related files from your system"; Admin="Requires Admin Permissions"},
             @{Name="Join Marius Discord";                 URL="DISCORD";               Desc="Join the Marius community on Discord"},
             @{Name="Troubleshooting";                     URL="TROUBLESHOOTING";       Desc="Common issues and solutions for Marius controllers"},
             @{Name="FR33THY Ultimate Optimization Guide"; URL="FR33THY_GUIDE";         Desc="Optimise and Debloat Windows"},
+            @{Name="Setup Guide By Parasite";             URL="PARASITE_GUIDE";        Desc="Legacy option - manually set up your sticks/controller"},
+            @{Name="EODBruz Socials";                     URL="EODBRUZ_SOCIALS";       Desc="Follow the script developer - all of my socials in one place"},
             @{Name="Back";                                URL="BACK";                  Desc="Return to main menu"}
         )
         $tbTW=790; $tbTH=60; $tbSP=4; $tbSX=30; $tbSY=90; $tbIdx=0
@@ -3442,8 +3272,10 @@ function Show-ToolboxPage {
             $tbTile.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(30,30,30)
             $tbTile.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(50,50,50)
             $tbTile.Tag = $tbItem.URL
+            if ($tbItem.URL -ne "BLANK") {
             $tbTile.Add_MouseEnter({ $this.BackColor=[System.Drawing.Color]::FromArgb(25,25,25); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::FromArgb(255,255,0); $this.FlatAppearance.BorderSize=2 })
             $tbTile.Add_MouseLeave({ $this.BackColor=[System.Drawing.Color]::FromArgb(15,15,15); $this.FlatAppearance.BorderColor=[System.Drawing.Color]::Yellow; $this.FlatAppearance.BorderSize=1 })
+            } else { $tbTile.Cursor = [System.Windows.Forms.Cursors]::Default; $tbTile.TabStop = $false }
             $tbN=$tbItem.Name; $tbD=$tbItem.Desc; $tbU=$tbItem.URL; $tbA=if($tbItem.Admin){$tbItem.Admin}else{""}
             $tbTile.Add_Paint({
                 param($s,$e); $g=$e.Graphics
@@ -3466,8 +3298,6 @@ function Show-ToolboxPage {
                 if ($tu -eq "BACK")                { Show-MainPage; return }
                 if ($tu -eq "USB_ANALYZER")        { Show-UsbAnalyzer; return }
                 if ($tu -eq "GAMEBAR_FIX")         { Invoke-GameBarNotificationFix; return }
-                if ($tu -eq "UNINSTALL_HIDUSBF")   { Invoke-UninstallHIDUSBF; return }
-                if ($tu -eq "CONTROLLER_TELEMETRY") { Install-ControllerTelemetry; return }
                 if ($tu -eq "TROUBLESHOOTING")     { Show-TroubleshootingDialog; return }
                 if ($tu -eq "DEEPPOLL") { Show-DeepPoll; return }
                 if ($tu -eq "DEEPLOG")  { Show-DeepLog; return }
@@ -3495,6 +3325,46 @@ function Show-ToolboxPage {
                 if ($tu -eq "APP_INFO")      { Show-AppInfoDialog; return }
                 if ($tu -eq "DISCORD") {
                     Start-Process "https://discord.com/invite/9MZXjbrB6P"
+                    return
+                }
+                if ($tu -eq "EODBRUZ_SOCIALS") {
+                    $targetUrl = "https://linktr.ee/EODBruz"
+                    $defaultBrowser = Get-DefaultBrowser
+                    $browserPath = Get-BrowserPath $defaultBrowser
+                    if (-not $browserPath) {
+                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                            if ($browser -ne $defaultBrowser) {
+                                $browserPath = Get-BrowserPath $browser
+                                if ($browserPath) { break }
+                            }
+                        }
+                    }
+                    if ($browserPath) {
+                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                        $wW=1200; $wH=800
+                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
+                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
+                    } else { Start-Process $targetUrl }
+                    return
+                }
+                if ($tu -eq "PARASITE_GUIDE") {
+                    $targetUrl = "https://x.com/Parasite/status/2033329474922549297"
+                    $defaultBrowser = Get-DefaultBrowser
+                    $browserPath = Get-BrowserPath $defaultBrowser
+                    if (-not $browserPath) {
+                        foreach ($browser in @("Chrome","Edge","Brave","Opera","Vivaldi","Arc")) {
+                            if ($browser -ne $defaultBrowser) {
+                                $browserPath = Get-BrowserPath $browser
+                                if ($browserPath) { break }
+                            }
+                        }
+                    }
+                    if ($browserPath) {
+                        $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                        $wW=1200; $wH=800
+                        $l=[Math]::Floor(($screen.Width-$wW)/2); $t=[Math]::Floor(($screen.Height-$wH)/2)
+                        Start-Process -FilePath $browserPath -ArgumentList "--app=`"$targetUrl`" --window-size=$wW,$wH --window-position=$l,$t"
+                    } else { Start-Process $targetUrl }
                     return
                 }
                 if ($tu -eq "FR33THY_GUIDE") {
@@ -3538,7 +3408,7 @@ function Show-MainPage {
 # ============================================================================
 # MAIN MENU TILES
 # (Setup Controller, Joystick Tester, Polling Rate Checker, Firmware Updater,
-#  Setup Guide By Parasite, Beta Portal, Creator Twitter, Update Script,
+#  HORNS, Beta Portal, Creator Twitter, Update Script,
 #  Marius Toolbox, Exit)
 # ============================================================================
 $websites = @(
@@ -3547,9 +3417,9 @@ $websites = @(
     @{Name="Polling Rate Checker";     URL="https://tools.mariusheier.com/poll_checker.html";            Desc="Test and verify your controller's polling rate"},
     @{Name="Firmware Updater";         URL="https://update.mariusheier.com/";                            Desc="Update Your Controller to Latest Versions Or Beta Versions"},
     @{Name="USB Latency Analyzer"; URL="USB_ANALYZER";                                                Desc="Count chips between your device and CPU. More chips = more latency"},
-    @{Name="Setup Guide By Parasite";  URL="https://x.com/Parasite/status/2033329474922549297";          Desc="Explains How to setup sticks/controller"},
+    @{Name="HORNS";                    URL="https://horns.fyi/";                                         Desc="Setup Your Marius Controller"; Post="(UNOFFICIAL TOOL) (use at your own risk)"},
     @{Name="Creator Twitter";          URL="https://x.com/mariusheier";                                  Desc="Follow for updates, tips, and support"},
-    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="HID Telemetry Diagnostic, Gamebar Notification Removal, FR33THY Ultimate Guide"},
+    @{Name="Marius Toolbox";           URL="TOOLBOX";                                                    Desc="Gamebar Notification Removal, FR33THY Ultimate Guide"},
     @{Name="Update Script";            URL="UPDATE";                                                     Desc="Download and install the latest version automatically"},
     @{Name="App Information";          URL="APP_INFO";                                                   Desc="View information about this application"},
     @{Name="Exit";                     URL="EXIT";                                                       Desc="Close this application"}
@@ -3599,6 +3469,8 @@ foreach ($site in $websites) {
     
     $siteName = $site.Name
     $siteDesc = $site.Desc
+    $sitePre  = if ($site.Pre)  { $site.Pre }  else { "" }
+    $sitePost = if ($site.Post) { $site.Post } else { "" }
     
     $tile.Add_Paint({
         param($sender, $e)
@@ -3611,7 +3483,18 @@ foreach ($site in $websites) {
         $redBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Red)
         
         $g.DrawString($siteName, $titleFont, $whiteBrush, 20, 12)
-        $g.DrawString($siteDesc, $descFont, $redBrush, 20, 35)
+        $yellowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Yellow)
+        $dx = 20
+        if ($sitePre -ne "") {
+            $g.DrawString($sitePre, $descFont, $yellowBrush, $dx, 35)
+            $dx += [int]$g.MeasureString($sitePre, $descFont).Width + 2
+        }
+        $g.DrawString($siteDesc, $descFont, $redBrush, $dx, 35)
+        if ($sitePost -ne "") {
+            $dx += [int]$g.MeasureString($siteDesc, $descFont).Width + 2
+            $g.DrawString($sitePost, $descFont, $yellowBrush, $dx, 35)
+        }
+        $yellowBrush.Dispose()
         
         $whiteBrush.Dispose()
         $redBrush.Dispose()
