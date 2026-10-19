@@ -77,9 +77,9 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **Polling Rate Checker** | Opens the polling rate checker at tools.mariusheier.com |
 | **Firmware Updater** | Opens [update.mariusheier.com](https://update.mariusheier.com/) — update to latest or beta firmware |
 | **USB Latency Analyzer** | Runs the built-in USB chip counter — count hops between your device and CPU |
-| **Setup Guide By Parasite** | Opens the stick/controller setup guide on X |
+| **HORNS** | Opens [horns.fyi](https://horns.fyi/) — an **unofficial** third-party tool to set up your Marius controller (use at your own risk) |
 | **Creator Twitter** | Opens [@mariusheier](https://x.com/mariusheier) on X |
-| **Marius Toolbox** | Opens the Toolbox submenu (HID Telemetry, GameBar Removal, Beta Portal, FR33THY Guide, Discord) |
+| **Marius Toolbox** | Opens the Toolbox submenu (GameBar Removal, FR33THY Guide, Parasite Guide, Socials) |
 | **Update Script** | Manually triggers a download and install of the latest version |
 | **App Information** | View app details, developer info, and the full license agreement |
 | **Exit** | Closes the application |
@@ -92,9 +92,10 @@ The app launches a dark-themed GUI with RGB border animation. Each menu tile sho
 | **DeepPoll** | Downloads and runs DeepPoll.exe — measures USB polling rate with microsecond precision using kernel-level ETW tracing |
 | **DeepLog** | Downloads and runs DeepLog.exe — logs USB input events with microsecond timestamps for latency analysis |
 | **Beta Portal** | Opens [beta.mariusheier.com](https://beta.mariusheier.com/) — enroll in early firmware access |
-| **HID Telemetry Diagnostic Tool** | Advanced HID telemetry diagnostic tool by [@TheQuest818](https://github.com/TheQuest818) |
 | **Join Marius Discord** | Opens the official Marius community Discord server |
 | **FR33THY Ultimate Optimization Guide** | Opens [FR33THY/Ultimate](https://github.com/FR33THYFR33THY/Ultimate) in app mode — optimise and debloat Windows |
+| **Setup Guide By Parasite** | Legacy option — opens the guide for manually setting up your sticks/controller on X |
+| **EODBruz Socials** | Opens [linktr.ee/EODBruz](https://linktr.ee/EODBruz) — follow the script developer |
 | **GameBar Notification Removal** | Removes the GameBar popup that affects 8K polling rate controllers |
 | **Auto Calibration** | Edit your controller's calibration config (xMin/yMin/xMax/yMax) to yield better stick results |
 | **Back** | Returns to the main menu |
@@ -372,6 +373,13 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 
 ## 📋 Changelog
 
+### v3.7.7
+- Replaced **Setup Guide By Parasite** on the main menu with **HORNS** (horns.fyi) — an unofficial third-party tool, use at your own risk
+- Moved the Parasite guide into the Marius Toolbox as a legacy option for setting up controllers manually
+- Added **EODBruz Socials** to Marius Toolbox
+- Removed **Uninstall HIDUSBF** from Marius Toolbox
+- Removed **HID Telemetry Diagnostic Tool** from Marius Toolbox
+
 ### v3.7.6
 - Added **Uninstall HIDUSBF** to Marius Toolbox — cleanly removes the HIDUSBF driver and related files
 - Auto Calibration stick buttons expanded from ±10/±20 to ±2/±5/±10/±20 for finer adjustment
@@ -449,7 +457,6 @@ Yes. This is an official application developed and maintained by @EODBruz. Only 
 | **App Creator** | [@mariusheier](https://x.com/mariusheier) — Creator of the MARIUS Board |
 | **Script Developer** | [@EODBruz](https://github.com/EODBruz) — PowerShell development and tooling |
 | **Optimization Scripts** | [FR33THY](https://github.com/FR33THYFR33THY/Ultimate) — Ultimate Windows optimization guide |
-| **HID Telemetry Tool** | [@TheQuest818](https://github.com/TheQuest818) — Advanced HID Telemetry Diagnostic Tool |
 
 ---
 
